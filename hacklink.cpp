@@ -1,3 +1,16 @@
+/*
+This program takes a Perihelion/Hacksembly assembly file and converts it to
+binary. It requires a file to provide the codes to translate between assembly
+and binary. See the comments for function 'load_keys()' to understand the formating
+requirements of the code-containging file.
+
+Pseudocode structure:
+0.) (Get user options)
+1.) Read in codes/keys
+2.) Go line-by-line through assembly file - save data to vector of 'byte' objects
+3.) Write bin file
+*/
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -14,12 +27,18 @@
 
 using namespace std;
 
+/*
+Represents an assembly/binary translation code
+*/
 typedef struct{
 	string assembly; //Assembly string
 	string binary; //Binary string
-	int ndb; //Number of bytes of data after instruction
+	int ndb; //Number of bytes of data after instruction (eg. for storing address, numbers, etc)
 }key;
 
+/*
+Represents a byte that will be written to homebrew memory.
+*/
 typedef struct{
 	string data;
 	size_t address;
@@ -27,7 +46,6 @@ typedef struct{
 
 bool load_keys(string keyfile, vector<key>& keys);
 bool place_byte(vector<byte>& bin, byte x, int& greatest_address, size_t line_num);
-
 int hbdstring_int(string num);
 string hbdstring_bin(string num);
 
@@ -180,7 +198,7 @@ int main(int argc, char** argv){
 
 				byte temp_byte;
 				int val = hbdstring_int(words[2]);
-				temp_byte.data = val;
+				temp_byte.data = hbdstring_bin(words[2]);
 				temp_byte.address = address;
 
 				if (words.size() > 3){
@@ -188,7 +206,9 @@ int main(int argc, char** argv){
 					return -1;
 				}
 
-
+				if (!place_byte(bin, temp_byte, greatest_address, line_num)){
+					return -1;
+				}
 
 				if (val == -1){
 					cout << "ERROR: Failed to process line" << to_string(line_num) << ".\n\tFailed to identify token '" << words[2] << "' as an instruction or numeric value." << endl;
@@ -215,6 +235,13 @@ int main(int argc, char** argv){
 	return 0;
 }
 
+/*
+Filters through 'bin' and places 'byte' where it belongs, according to the address.
+Greatest address is used to accelerate the process - just initialize it with -1
+before calling 'place_byte' the first time, then don't touch it so different calls
+of this function can remember it. line_num is just used for giving nice error
+messages.
+*/
 bool place_byte(vector<byte>& bin, byte x, int& greatest_address, size_t line_num){
 
 	//If address > last address append
@@ -298,6 +325,12 @@ bool load_keys(string keyfile, vector<key>& keys){
 	return true;
 }
 
+/*
+Accepts an string representing an integer 'num', and converts it to an int. The
+cool thing about this function though is that the input num can be of decimal,
+hexadecimal, or binary format. Just write the number for decimal or append an 'x'
+or 'b' for hex and bin formats, respectively!
+*/
 int hbdstring_int(string num){
 
 	if (num.length() < 2){
@@ -318,6 +351,10 @@ int hbdstring_int(string num){
 
 }
 
+/*
+Same idea as hbdstring_int(), except instead of returning an integer type, it
+returns a string of the integer data represented as an 8-bit binary byte.
+*/
 string hbdstring_bin(string num){
 
 	//Get numeric value
@@ -326,8 +363,17 @@ string hbdstring_bin(string num){
 	//Process errors
 	if (val == -1) return "ERROR";
 
-	//
-	return std::bitset<8>(val).to_string();
+	//Convert int to binary string
+	std::string r;
+    while (val!=0) { //Algorithm borrowed from GitHub (https://stackoverflow.com/questions/22746429/c-decimal-to-binary-converting)
+		r = ( val % 2 == 0 ? "0" : "1" ) + r;
+		val /= 2;
+	}
+
+	//Pad with leading zeros (takes care of zero-case)
+	while (r.length() < 8) r = "0" + r;
+
+	return r;
 
 }
 

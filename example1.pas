@@ -7,5 +7,5 @@
 6: ADD
 7: REGC_DISPA
 
-x000A: xAA
-x000B: x0F
+x0009: xAA
+x000A: x0F
