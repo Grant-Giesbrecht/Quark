@@ -57,6 +57,7 @@ int main(int argc, char** argv){
 	string keyfile = "perihelion_assembly_codes.bcod"; //where to find assembly -> binary codes
 
 	bool verbose = false; //Print verbose output
+	bool create_bin = true; //Create binary file
 
 	vector<byte> bin; //Binary out
 	vector<key> keys;
@@ -74,6 +75,8 @@ int main(int argc, char** argv){
 		for (int arg = 2 ; arg < argc ; arg++){
 			if (string(argv[arg]) == "-v"){
 				verbose = true;
+			}else if(string(argv[arg]) == "-p"){ //"practice"
+				create_bin = false;
 			}
 		}
 
@@ -231,6 +234,42 @@ int main(int argc, char** argv){
 		}
 		cout << endl;
 	}
+
+	//Create binary file
+	if (create_bin){
+
+		ofstream outfile(pas_file.substr(0, pas_file.length()-3) + "pbin");
+	    if(outfile.is_open()){
+	        string str;
+
+			//For each byte...
+			size_t line = -1;
+			size_t filler_bytes = 0;
+			for (size_t l = 0 ; l < bin.size() ; l++){
+
+				line++;
+
+				//Get to correct address...
+				while (line < bin[l].address){
+					outfile << "00000000\n";
+					line++;
+					filler_bytes++;
+				}
+
+				outfile << bin[l].data << "\n";
+
+			}
+
+	        outfile.close();
+
+			cout << "Wrote binary file '" << pas_file.substr(0, pas_file.length()-3) + "pbin" << "':" << endl;
+			cout << "\tTotal bytes written: " << to_string(line) << endl;
+			cout << "\tDefined bytes: " << to_string(bin.size()) << endl;
+			cout << "\tFiller bytes: " << to_string(filler_bytes) << endl;
+	    }
+
+	}
+
 
 	return 0;
 }

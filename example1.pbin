@@ -1,1 +1,12 @@
-//perihelion binary - each line contains 1 byte of 1s and 0s to directly be copied into perihelion flash
+00000001
+00000000
+00001010
+00000010
+00000000
+00001011
+00001001
+00000111
+00000000
+00000000
+10101010
+00001111
