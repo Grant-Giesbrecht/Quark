@@ -77,6 +77,8 @@ int main(int argc, char** argv){
 				verbose = true;
 			}else if(string(argv[arg]) == "-p"){ //"practice"
 				create_bin = false;
+			}else{
+				cout << "WARNING: Ignoring unrecognized flag '" << argv[arg] << "'." << endl;
 			}
 		}
 
