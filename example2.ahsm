@@ -37,8 +37,16 @@
 RAM_REGA &val_2
 RAM_REGB &pi
 MULT
-^CHAIN_MULT(&f);
-^CHAIN_MULT(&C);
+
+//HKP: EXPANDED SUBROUTINE
+REGC_REGA
+RAM_REGB &f
+MULT
+
+//HKP: EXPANDED SUBROUTINE
+REGC_REGA
+RAM_REGB &C
+MULT
 
 //Calculate inverse
 REGC_RAM &temp
@@ -46,36 +54,26 @@ RAM_REGB &temp
 RAM_REGA &val_1
 
 //Display result
-REGC_DISPA
+//HKP: EXPANDED IF-ELSE
+IFZERO @CLAUSE_IF
+RPAUS 0 //Reprogrammable light off
+JUMP @END_IF
+#HERE @CLAUSE_IF
+RPLAN 0 //Reprogrammable light on
+#HERE @END_IF
 
-IFZERO{
-	RPLAN 0 //Reprogrammable light on
-}ELSE{
-	RPAUS 0 //Reprogrammable light off
-}
-
+//HKP: EXPANDED IF-ELSE
+IFZERO @CLAUSE_IF
+RPAUS 1 //Reprogrammable light off
+JUMP @END_IF
+#HERE @CLAUSE_IF
+RPLAN 1 //Reprogrammable light on
+#HERE @END_IF
 IFCARRY{
-	RPLAN 1 //Reprogrammable light on
-}ELSE{
-	RPAUS 1 //Reprogrammable light off
-}
 
-WHILEZERO{
-	//things
-}
-
+//HKP: EXPANDED WHILE
 #HERE @start_loop
 ADD //address @start_loop refers to this add instruction. This is for jump instructions
-//things
 IFZERO{
 	JUMP @start_loop
-}
-
-//*************** Define Subroutines *************
-
-//DEFINE SUBROUTINE
-#SUBROUTINE CHAIN_MULT(x){
-	REGC_REGA
-	RAM_REGB x
-	MULT
 }
