@@ -214,7 +214,6 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
 			}
-			cout << "Closed on index " << i << " which is line " << program[i].lnum << endl;
 
 			//*************** COMPLETE EXPANSION OF WHILE ******************//
 
@@ -227,7 +226,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 			//Add 'jump to top' at bottom of while
 			temp_line.str = "IFZERO {";
 			block_contents.push_back(temp_line);
-			temp_line.str = "JUMP @START_LOOP_NUM"+to_string(opening_line);
+			temp_line.str = "\tJUMP @START_LOOP_NUM"+to_string(opening_line);
 			block_contents.push_back(temp_line);
 			temp_line.str = "}";
 			block_contents.push_back(temp_line);
@@ -292,7 +291,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 			//Add 'jump to top' at bottom of while
 			temp_line.str = "IFCARRY {";
 			block_contents.push_back(temp_line);
-			temp_line.str = "JUMP @START_LOOP_NUM"+to_string(opening_line);
+			temp_line.str = "\tJUMP @START_LOOP_NUM"+to_string(opening_line);
 			block_contents.push_back(temp_line);
 			temp_line.str = "}";
 			block_contents.push_back(temp_line);
@@ -363,8 +362,10 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 			//Add substring
 			line temp_line;
 			temp_line.str = input.str.substr(found_open+1);
+			remove_end_whitespace(temp_line.str);
 			temp_line.lnum = input.lnum;
-			block_contents.push_back(temp_line);
+
+			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
 		}
 	}
 
@@ -387,9 +388,7 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 			temp_line.str = input.str.substr(0, found_closed);
 			remove_end_whitespace(temp_line.str);
 			temp_line.lnum = input.lnum;
-			if (temp_line.str.length() > 0){
-				block_contents.push_back(temp_line);
-			}
+			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
 
 
 		}

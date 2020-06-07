@@ -3,7 +3,7 @@
 ADD
 SUB
 
-WHILEZERO{
+WHILECARRY{ //This is an inline comment
 	SUB
 	ADD
 	//Comment
