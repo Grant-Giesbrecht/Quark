@@ -164,7 +164,8 @@ void purge_comments(vector<line>& program, bool verbose){
 }
 
 /*
-Finds while statements and expands them into AHSM code.
+Finds while statements and expands them into AHSM code. It will collapse the
+while statements into IF-JUMP statements.
 Syntax rules for while statements:
 	* the while-keyword must be the first token in a line.
 	* While-keywords:
@@ -213,6 +214,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
 			}
+			cout << "Closed on index " << i << " which is line " << program[i].lnum << endl;
 
 			//*************** COMPLETE EXPANSION OF WHILE ******************//
 
@@ -231,21 +233,17 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 			block_contents.push_back(temp_line);
 
 			//Erase while loop
-			cout << i << endl;
-			cout << opening_index << endl;
 			if (i >= program.size()){
-				program.erase(program.begin()+opening_index, program.end());
+				program.erase(program.begin()+opening_index, program.end()+1);
 			}else{
-				program.erase(program.begin()+opening_index, program.begin()+i);
+				program.erase(program.begin()+opening_index, program.begin()+i+1);
 			}
-
-			cout << "MARKER" << endl;
 
 			//Insert expanded while loop
 			program.insert(program.begin()+opening_index, block_contents.begin(), block_contents.end());
 
 			//Change program index
-			i = opening_line + block_contents.size();
+			i = opening_index + block_contents.size();
 
 		}else if (program[i].str.substr(0, 10) == "WHILECARRY"){ //If beginning of line is WHILECARRY keyword
 
@@ -267,6 +265,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 			vector<line> block_contents;
 			get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
 			size_t opening_line = program[i].lnum;
+			size_t opening_index = i;
 
 			//Keep reading lines until entire block-contents have been read
 			while (blocks_open > 0){
@@ -299,13 +298,17 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 			block_contents.push_back(temp_line);
 
 			//Erase while loop
-			program.erase(program.begin()+opening_line, program.begin()+i);
+			if (i >= program.size()){
+				program.erase(program.begin()+opening_index, program.end()+1);
+			}else{
+				program.erase(program.begin()+opening_index, program.begin()+i+1);
+			}
 
 			//Insert expanded while loop
-			program.insert(program.begin()+opening_line, block_contents.begin(), block_contents.end());
+			program.insert(program.begin()+opening_index, block_contents.begin(), block_contents.end());
 
 			//Change program index
-			i = opening_line + block_contents.size();
+			i = opening_index + block_contents.size();
 
 		}
 	}
@@ -381,9 +384,13 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 
 			//Add substring
 			line temp_line;
-			temp_line.str = input.str.substr(0, found_open);
+			temp_line.str = input.str.substr(0, found_closed);
+			remove_end_whitespace(temp_line.str);
 			temp_line.lnum = input.lnum;
-			block_contents.push_back(temp_line);
+			if (temp_line.str.length() > 0){
+				block_contents.push_back(temp_line);
+			}
+
 
 		}
 	}
