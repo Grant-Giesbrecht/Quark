@@ -379,7 +379,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 			//************ CHECK IF ELSE STATEMENT PROVIDED ****************//
 
-			blocks_open = 1;
+			blocks_open = 2; //Make blocks open 2 so the initial close bracket is skipped
 			vector<line> else_block_contents;
 			size_t else_opening_line = program[i].lnum;
 			size_t else_opening_index = i;
@@ -410,6 +410,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 				}
 			}
 
+
 			//*************** COMPLETE EXPANSION OF WHILE ******************//
 
 			//Add the jump location for the TRUE clause
@@ -430,8 +431,13 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 			//Add else clause if provided
 			if (has_else){
-				for (long int ei = else_block_contents.size()-1 ; ei >= 0 ; i--){
+				for (long int ei = else_block_contents.size()-1 ; ei >= 0 ; ei--){
+					line temp_line_test;
+					temp_line_test.lnum = 0;
+					temp_line_test.str = "*";
 					block_contents.insert(block_contents.begin(), else_block_contents[ei]);
+
+					if (i > 1e3) exit(1);
 				}
 
 			}
@@ -492,6 +498,31 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 		block_contents.push_back(input);
 	}
 
+	//Does closing bracket exist?
+	if (found_closed != string::npos){
+		blocks_open--;
+
+		if (blocks_open == 0){
+
+			//Annotate if requested
+			if (annotate){
+				line note_line;
+				note_line.str = "//HKOMP: END BLOCK CONTENTS";
+				note_line.lnum = input.lnum;
+				block_contents.push_back(note_line);
+			}
+
+			//Add substring
+			line temp_line;
+			temp_line.str = input.str.substr(0, found_closed);
+			remove_end_whitespace(temp_line.str);
+			temp_line.lnum = input.lnum;
+			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
+
+			return false;
+		}
+	}
+
 	//Does opening bracket exist?
 	if (found_open != string::npos){
 		if (!ignore_first_open){ //Proceed as normal, increment the blocks_open count
@@ -516,31 +547,7 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 		}
 	}
 
-	//Does closing bracket exist?
-	if (found_closed != string::npos){
-		blocks_open--;
-
-		if (blocks_open == 0){
-
-			//Annotate if requested
-			if (annotate){
-				line note_line;
-				note_line.str = "//HKOMP: END BLOCK CONTENTS";
-				note_line.lnum = input.lnum;
-				block_contents.push_back(note_line);
-			}
-
-			//Add substring
-			line temp_line;
-			temp_line.str = input.str.substr(0, found_closed);
-			remove_end_whitespace(temp_line.str);
-			temp_line.lnum = input.lnum;
-			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
-
-
-		}
-	}
-
+	return true;
 }
 
 
