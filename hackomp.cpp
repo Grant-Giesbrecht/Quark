@@ -474,8 +474,11 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 Prints the program
 */
 void print_program(vector<line>& program){
+	string start_str;
 	for (size_t i = 0 ; i < program.size() ; i++){
-		cout << "[" << to_string(program[i].lnum) << "]: " << program[i].str << endl;
+		start_str = "[" + to_string(program[i].lnum) + "]: ";
+		while (start_str.length() < 9) start_str = " " + start_str;
+		cout << start_str << program[i].str << endl;
 	}
 }
 
