@@ -5,6 +5,7 @@
 #include <IEGA/string_manip.hpp>
 #include <IEGA/KTable.hpp>
 #include <fstream>
+#include <cctype>
 
 //CXCOMPILE g++ hackomp.cpp -o hackomp -lIEGA -std=c++11
 //CXCOMPILE ./hackomp hacksembly.hack -v
@@ -18,17 +19,25 @@ typedef struct{
 	size_t lnum;
 }line;
 
+typedef struct{
+	string name;
+	vector<string> arguments;
+	vector<line> contents;
+}subroutine;
+
 //PURGES
 void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
+bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annotate);
 bool expand_subroutine_statements(vector<line>& program, bool verbose);
 
 //OTHER
 void print_program(vector<line>& program);
 bool get_block_contents(vector<line>& block_contents, line input, int& blocks_open, bool ignore_first_open=false, bool annotate=false);
+bool is_valid_name(string s);
 
 int main(int argc, char** argv){
 
@@ -93,6 +102,7 @@ int main(int argc, char** argv){
 		line_num++; //Increment line number
 		if (line_in.length() == 0) continue; //Skip blank lines
 		ensure_whitespace(line_in, "{"); //Ensure whitespace around certain characters
+		ensure_whitespace(line_in, "(,)"); //Ensure whitespace around certain characters
 		remove_end_whitespace(line_in); //remove leading, trailing whitespace
 
 		//Create 'line' struct
@@ -127,9 +137,10 @@ int main(int argc, char** argv){
 	cout << "\nIF STATEMENTS EXPANDED" << endl;
 	if (verbose) print_program(program);
 
+	load_subroutine_definitions(program, verbose, annotate);
 
-
-
+	cout << "\nSUBROUTINES LOADED" << endl;
+	if (verbose) print_program(program);
 
 
 	// if (verbose) print_program(program);
@@ -327,6 +338,16 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 }
 
+/*
+Finds if statements and expands them into AHSM code. It will collapse the
+IF statements into JUMP-HERE statements.
+Syntax rules for if statements:
+	* the if-keyword must be the first token in a line.
+	* if-keywords:
+	 	* IFZERO
+		* IFCARRY
+	* block opening bracket ({) must immediately follow if-keyword and on same line
+*/
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 	size_t num_del = 0;
@@ -469,6 +490,131 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 }
 
+bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annotate){
+
+	size_t num_def = 0;
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		if (program[i].str.substr(0, 11) == "#SUBROUTINE"){ //If beginning of line is #SUBROUTINE keyword
+
+			subroutine temp_sr;
+
+			//******************* ENSURE CORRECT SYNTAX ******************//
+
+			//Parse string
+			vector<string> words = parse(program[i].str, " \t");
+
+			//Enure two words or more
+			if (words.size() < 5){
+				cout << "ERROR: Subroutine definition requires name, parentheses, and opening curly bracket. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//************************** GET NAME *************************//
+
+			//Ensure valid subroutine name
+			if (!is_valid_name(words[1])){
+				cout << "ERROR: Subroutine name '" << words[1] << "' is not a permissible name. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			temp_sr.name = words[1];
+
+			//************************ GET ARGUMENTS **********************//
+
+			//Ensure opening parentheses in right spot
+			if (words[2] != "("){
+				cout << "ERROR: Opening parentheses must be present after subroutine name. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//Ensure closing parentheses in right spot
+			if (words[words.size()-2] != ")"){
+				cout << "ERROR: Closed parentheses must be second to last token in subroutine definition line. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//Ensure opening bracket
+			if (words[words.size()-1] != "{"){
+				cout << "ERROR: Opening curly brackets must be last token in subroutine definition line. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//read in arguments list
+			string last_word = ",";
+			for (size_t w = 3 ; w < words.size()-2 ; w++){
+
+				//Ensure commas separate words
+				if (last_word != ","){
+					if (words[w] == ","){
+						last_word = ",";
+						continue;
+					}else{
+						cout << "ERROR: comma required after argument '" << last_word << "'. Line: " << to_string(program[i].lnum) << endl;
+						return false;
+					}
+				}
+
+				//Add word to arugments list
+				temp_sr.arguments.push_back(words[w]);
+				last_word = words[w];
+			}
+
+
+			//***************** GET BLOCK CONTENTS ************************//
+
+			//Read first line...
+			int blocks_open = 1;
+			get_block_contents(temp_sr.contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			size_t opening_line = program[i].lnum;
+			size_t opening_index = i;
+
+			//Keep reading lines until entire block-contents have been read
+			while (blocks_open > 0){
+
+				i++; //Proceed to next line
+
+				//Stay within no. lines in program
+				if (i >= program.size()){
+					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					return false;
+				}
+
+				get_block_contents(temp_sr.contents, program[i], blocks_open, false, annotate);
+			}
+
+
+			//*************** COMPLETE EXPANSION OF WHILE ******************//
+
+			//Erase definition
+			if (i >= program.size()){
+				program.erase(program.begin()+opening_index, program.end()+1);
+			}else{
+				program.erase(program.begin()+opening_index, program.begin()+i+1);
+			}
+
+			//Insert comment if requested
+			if (annotate){
+				line temp_line;
+				temp_line.lnum = opening_line;
+				temp_line.str = "//HKOMP: Subroutine definition. Name: '" + temp_sr.name + "' Arguments: " + to_string(temp_sr.arguments.size()) + " Block size: " + to_string(temp_sr.contents.size());
+				program.insert(program.begin()+opening_index, temp_line);
+			}
+
+			//Change program index
+			i = opening_index;
+			if (!annotate) i--;
+
+			cout << endl;
+			for (size_t bc = 0 ; bc < temp_sr.contents.size() ; bc++){
+				cout << bc << " " << temp_sr.contents[bc].str << endl;
+			}
+
+		}
+	}
+
+}
+
 
 /*
 Prints the program
@@ -553,7 +699,27 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 	return true;
 }
 
+/*
+Returns true if name is valid variable name:
+	* only numbers, letters, and underscores
+	* first char is letter
+	* len > 0
+*/
+bool is_valid_name(string s){
 
+	//Ensure at least one character
+	if (s.length() < 1) return false;
+
+	//Ensure first character is letter
+	if (!isalpha(s[0])) return false;
+
+	//Ensure all characters are number, letter, or underscore
+	for (size_t i = 1 ; i < s.length() ; i++){
+		if (!isalnum(s[i]) && s[i] != '_') return false;
+	}
+
+	return true;
+}
 
 
 
