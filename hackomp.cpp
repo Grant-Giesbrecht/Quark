@@ -23,7 +23,7 @@ void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
-bool expand_if_statements(vector<line>& program, bool verbose);
+bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
 bool expand_subroutine_statements(vector<line>& program, bool verbose);
 
 //OTHER
@@ -106,20 +106,33 @@ int main(int argc, char** argv){
 	//***********************************************************************//
 	//*************************** EXPAND, COMPILE, ETC **********************//
 
+
+	cout << "ORIGINAL: " << endl;
+	if (verbose) print_program(program);
+
 	if (!keep_comments) purge_comments(program, verbose);
+
+	if (verbose && !keep_comments){
+		cout << "\nCOMMENTS PURGED:" << endl;
+		if (verbose) print_program(program);
+	}
 
 	expand_while_statements(program, verbose, annotate);
 
-
-
-
-
-
-
-
-
-
+	cout << "\nWHILE STATMENTS EXPANDED:" << endl;
 	if (verbose) print_program(program);
+
+	expand_if_statements(program, verbose, annotate);
+
+	cout << "\nIF STATEMENTS EXPANDED" << endl;
+	if (verbose) print_program(program);
+
+
+
+
+
+
+	// if (verbose) print_program(program);
 
 
 	return 0;
@@ -312,7 +325,141 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 		}
 	}
 
-	if (verbose) cout << "Purged " << to_string(num_del) << " comment lines and " << to_string(num_inline) << " inline comments." << endl;
+}
+
+bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
+
+	size_t num_del = 0;
+	size_t num_inline = 0;
+	bool was_carry = false;
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		if (program[i].str.substr(0, 6) == "IFZERO" || program[i].str.substr(0, 7) == "IFCARRY"){ //If beginning of line is WHILEZERO keyword
+
+			//Record if was zero or carry
+			if (program[i].str.substr(0, 6) == "IFZERO"){
+				was_carry = false;
+			}else{
+				was_carry = true;
+			}
+
+			//******************* ENSURE CORRECT SYNTAX ******************//
+
+			//Parse string
+			vector<string> words = parse(program[i].str, " \t");
+
+			//Enure two words or more, and that second word is block-opening bracket
+			if (words.size() < 2 || words[1] != "{"){
+				cout << "ERROR: No block-opening bracket after IF keyword. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//***************** GET BLOCK CONTENTS ************************//
+
+			//Read first line...
+			int blocks_open = 1;
+			vector<line> block_contents;
+			get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			size_t opening_line = program[i].lnum;
+			size_t opening_index = i;
+
+			//Keep reading lines until entire block-contents have been read
+			while (blocks_open > 0){
+
+				i++; //Proceed to next line
+
+				//Stay within no. lines in program
+				if (i >= program.size()){
+					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					return false;
+				}
+
+				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
+			}
+
+			//************ CHECK IF ELSE STATEMENT PROVIDED ****************//
+
+			blocks_open = 1;
+			vector<line> else_block_contents;
+			size_t else_opening_line = program[i].lnum;
+			size_t else_opening_index = i;
+			bool has_else = false;
+
+			//If else is found...
+			if (program[i].str.find("ELSE") != string::npos){
+
+				has_else = true;
+
+				//Read else block
+
+				//Read first line...
+				get_block_contents(else_block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+
+				//Keep reading lines until entire block-contents have been read
+				while (blocks_open > 0){
+
+					i++; //Proceed to next line
+
+					//Stay within no. lines in program
+					if (i >= program.size()){
+						cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+						return false;
+					}
+
+					get_block_contents(else_block_contents, program[i], blocks_open, false, annotate);
+				}
+			}
+
+			//*************** COMPLETE EXPANSION OF WHILE ******************//
+
+			//Add the jump location for the TRUE clause
+			line temp_line;
+			temp_line.lnum = opening_line;
+			temp_line.str = "#HERE @TRUE_IF_NUM"+to_string(opening_line);
+			block_contents.insert(block_contents.begin(), temp_line);
+
+			//Add the jump location for the end of the IF statement
+			temp_line.lnum = opening_line;
+			temp_line.str = "#HERE @END_IF_NUM"+to_string(opening_line);
+			block_contents.insert(block_contents.end(), temp_line);
+
+			//Add the jump command that prevents executing TRUE if FALSE
+			temp_line.lnum = opening_line;
+			temp_line.str = "JUMP @END_IF_NUM"+to_string(opening_line);
+			block_contents.insert(block_contents.begin(), temp_line);
+
+			//Add else clause if provided
+			if (has_else){
+				for (long int ei = else_block_contents.size()-1 ; ei >= 0 ; i--){
+					block_contents.insert(block_contents.begin(), else_block_contents[ei]);
+				}
+
+			}
+
+			//Add the initial JUMPIF_ statement
+			temp_line.lnum = opening_line;
+			if (was_carry){
+				temp_line.str = "JUMPIFCARRY @TRUE_IF_NUM"+to_string(opening_line);
+			}else{
+				temp_line.str = "JUMPIFZERO @TRUE_IF_NUM"+to_string(opening_line);
+			}
+			block_contents.insert(block_contents.begin(), temp_line);
+
+			//Erase IF statement
+			if (i >= program.size()){
+				program.erase(program.begin()+opening_index, program.end()+1);
+			}else{
+				program.erase(program.begin()+opening_index, program.begin()+i+1);
+			}
+
+			//Insert expanded if statement
+			program.insert(program.begin()+opening_index, block_contents.begin(), block_contents.end());
+
+			//Change program index
+			i = opening_index + block_contents.size();
+
+		}
+	}
 
 }
 
