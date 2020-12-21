@@ -81,7 +81,8 @@ public:
 	int false_value;
 
 	/*
-
+	Tells compiler if it should add a halt statement to the end of the program
+	if it is missing. A warning will still be generated.
 	*/
 	bool add_missing_halt;
 
@@ -468,6 +469,13 @@ bool read_directives(vector<line>& program, bool verbose, bool annotate, Compile
 					params.info("Compiler FALSE_VALUE set to " + to_string(params.false_value));
 				}catch(...){
 					params.warning("Failed to convert '" + words[3] +  "' to an integer value for compiler parameter FALSE_VALUE.", program[i].lnum);
+				}
+			}else if(words[1] == "ADD_MISSING_HALT"){
+				try{
+					params.add_missing_halt = gstd::to_bool(words[3]);
+					params.info("Compiler ADD_MISSING_HALT set to " + bool_to_str(params.add_missing_halt, 'l'));
+				}catch(...){
+					params.warning("Failed to convert '" + words[3] +  "' to a boolean value for compiler parameter ADD_MISSING_HALT.", program[i].lnum);
 				}
 			}else{
 				params.warning("Compiler directive '" + words[1] + "' unrecognized.");
