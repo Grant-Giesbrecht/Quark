@@ -16,16 +16,17 @@ Pseudocode structure:
 #include <vector>
 #include <stdio.h>
 #include <fstream>
-#include <IEGA/string_manip.hpp>
-#include <IEGA/KTable.hpp>
+#include <gstd.hpp>
+#include <ktable.hpp>
 #include <sstream>
 #include <bitset>
 
-//CXCOMPILE g++ hacklink.cpp -o hacklink -lIEGA -std=c++11
+//CXCOMPILE g++ hacklink.cpp -o hacklink -lgstd -lktable -std=c++11
 //CXCOMPILE ./hacklink example1.pas -v
 //CXGENRUN FALSE
 
 using namespace std;
+using namespace gstd;
 
 /*
 Represents an assembly/binary translation code
@@ -101,7 +102,7 @@ int main(int argc, char** argv){
 		// cout << "ASSEMBLY CODES:" << endl;
 		for (size_t i = 0 ; i < keys.size() ; i++){
 			// cout << "\tASSEMBLY: " << keys[i].assembly << "\t" << " \tBINARY: " << keys[i].binary << " \tNUM DATA BYTES: " << to_string(keys[i].ndb) << endl;
-			kt.row({keys[i].assembly, keys[i].binary, dtos(keys[i].ndb)});
+			kt.row({keys[i].assembly, keys[i].binary, to_gstring(keys[i].ndb, 30, 5)});
 		}
 
 		kt.alignt('c');
@@ -129,7 +130,7 @@ int main(int argc, char** argv){
 	    while (getline(file, line)) { //For each line...
 			line_num++;
 
-			remove_end_whitespace(line); //Remove whitespace from line
+			trim_whitespace(line); //Remove whitespace from line
 
 			if (line.length() == 0) continue; //Continue if blank
 			if (line.length() >= 2 && line.substr(0, 2) == "//") continue; //Skip comments
@@ -332,7 +333,7 @@ bool load_keys(string keyfile, vector<key>& keys){
 	    while (getline(file, line)) {
 			line_num++;
 
-			remove_end_whitespace(line); //Remove whitespace from line
+			trim_whitespace(line); //Remove whitespace from line
 
 			if (line.length() == 0) continue; //Continue if blank
 			if (line.length() >= 2 && line.substr(0, 2) == "//") continue; //Skip comments
