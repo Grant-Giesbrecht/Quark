@@ -1,18 +1,21 @@
+/*
+*/
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <IEGA/string_manip.hpp>
-#include <IEGA/KTable.hpp>
+#include <gstd.hpp>
 #include <fstream>
 #include <cctype>
 
-//CXCOMPILE g++ hackomp.cpp -o hackomp -lIEGA -std=c++11
+//CXCOMPILE g++ hackomp.cpp -o hackomp -lgstd -std=c++11
 //CXCOMPILE ./hackomp hacksembly.hack -v
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 
 using namespace std;
+using namespace gstd;
 
 typedef struct{
 	string str;
@@ -103,7 +106,7 @@ int main(int argc, char** argv){
 		if (line_in.length() == 0) continue; //Skip blank lines
 		ensure_whitespace(line_in, "{"); //Ensure whitespace around certain characters
 		ensure_whitespace(line_in, "(,)"); //Ensure whitespace around certain characters
-		remove_end_whitespace(line_in); //remove leading, trailing whitespace
+		trim_whitespace(line_in); //remove leading, trailing whitespace
 
 		//Create 'line' struct
 		line templine;
@@ -141,7 +144,6 @@ int main(int argc, char** argv){
 
 	cout << "\nSUBROUTINES LOADED" << endl;
 	if (verbose) print_program(program);
-
 
 	// if (verbose) print_program(program);
 
@@ -664,7 +666,7 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 			//Add substring
 			line temp_line;
 			temp_line.str = input.str.substr(0, found_closed);
-			remove_end_whitespace(temp_line.str);
+			trim_whitespace(temp_line.str);
 			temp_line.lnum = input.lnum;
 			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
 
@@ -689,7 +691,7 @@ bool get_block_contents(vector<line>& block_contents, line input, int& blocks_op
 			//Add substring
 			line temp_line;
 			temp_line.str = input.str.substr(found_open+1);
-			remove_end_whitespace(temp_line.str);
+			trim_whitespace(temp_line.str);
 			temp_line.lnum = input.lnum;
 
 			if (temp_line.str.length() > 0) block_contents.push_back(temp_line);
@@ -712,6 +714,8 @@ bool is_valid_name(string s){
 
 	//Ensure first character is letter
 	if (!isalpha(s[0])) return false;
+
+	//TODO: Check 's' is not a keyword, including true or false
 
 	//Ensure all characters are number, letter, or underscore
 	for (size_t i = 1 ; i < s.length() ; i++){
