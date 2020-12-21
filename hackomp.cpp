@@ -26,6 +26,7 @@ typedef struct{
 	string name;
 	vector<string> arguments;
 	vector<line> contents;
+	size_t declare_line;
 }subroutine;
 
 //PURGES
@@ -34,11 +35,12 @@ void purge_comments(vector<line>& program, bool verbose);
 //EXPANSIONS
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
-bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annotate);
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
 bool expand_subroutine_statements(vector<line>& program, bool verbose);
 
 //OTHER
-void print_program(vector<line>& program);
+void print_program(vector<line> program);
+void print_subroutines(vector<subroutine> subs);
 bool get_block_contents(vector<line>& block_contents, line input, int& blocks_open, bool ignore_first_open=false, bool annotate=false);
 bool is_valid_name(string s);
 
@@ -93,6 +95,7 @@ int main(int argc, char** argv){
 
 	//Read file into 'program' vector. Keeps every non-blank line (incl. comments)
 	vector<line> program;
+	vector<subroutine> subs;
 	ifstream file(filename.c_str());
 	if (!file.is_open()){
 		cout << "ERROR: Failed to open file '" << filename << "'." << endl;
@@ -140,10 +143,15 @@ int main(int argc, char** argv){
 	cout << "\nIF STATEMENTS EXPANDED" << endl;
 	if (verbose) print_program(program);
 
-	load_subroutine_definitions(program, verbose, annotate);
+	load_subroutine_definitions(program, subs, verbose, annotate);
+	cout << "\nSUBROUTINES LOADED\n" << endl;
 
-	cout << "\nSUBROUTINES LOADED" << endl;
+	if (verbose) print_subroutines(subs);
+
+	cout << "Program:" << endl;
 	if (verbose) print_program(program);
+
+
 
 	// if (verbose) print_program(program);
 
@@ -492,7 +500,13 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 }
 
-bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annotate){
+/*
+Reads through the program, removes all subroutine definitions, turns them into
+subroutine structs, and places them in the variable 'subs'.
+
+Returns true if no errors occur.
+*/
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate){
 
 	size_t num_def = 0;
 	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
@@ -500,6 +514,7 @@ bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annot
 		if (program[i].str.substr(0, 11) == "#SUBROUTINE"){ //If beginning of line is #SUBROUTINE keyword
 
 			subroutine temp_sr;
+			temp_sr.declare_line = program[i].lnum;
 
 			//******************* ENSURE CORRECT SYNTAX ******************//
 
@@ -607,26 +622,57 @@ bool load_subroutine_definitions(vector<line>& program, bool verbose, bool annot
 			i = opening_index;
 			if (!annotate) i--;
 
-			cout << endl;
-			for (size_t bc = 0 ; bc < temp_sr.contents.size() ; bc++){
-				cout << bc << " " << temp_sr.contents[bc].str << endl;
-			}
+			subs.push_back(temp_sr);
 
 		}
 	}
 
+	return true;
 }
 
 
 /*
 Prints the program
 */
-void print_program(vector<line>& program){
+void print_program(vector<line> program){
 	string start_str;
 	for (size_t i = 0 ; i < program.size() ; i++){
 		start_str = "[" + to_string(program[i].lnum) + "]: ";
 		while (start_str.length() < 9) start_str = " " + start_str;
 		cout << start_str << program[i].str << endl;
+	}
+}
+
+/*
+Prints the list of subroutines
+
+typedef struct{
+	string name;
+	vector<string> arguments;
+	vector<line> contents;
+}subroutine;
+*/
+void print_subroutines(vector<subroutine> subs){
+
+	string start_str;
+
+	for (size_t i = 0 ; i < subs.size() ; i++){
+
+		cout << "SUBROUTINE: '" << subs[i].name << "' (Decl: " << to_string(subs[i].declare_line) << ")" << endl;
+		cout << "    ARGUMENTS: ";
+		for (size_t j = 0 ; j < subs[i].arguments.size() ; j++){
+			cout << subs[i].arguments[j];
+			if (j+1 < subs[i].arguments.size()) cout << ", ";
+		}
+		if (subs[i].arguments.size() == 0) cout << "NONE" << endl;
+		cout << endl;
+		for (size_t j = 0 ; j < subs[i].contents.size() ; j++){
+
+			start_str = "[" + to_string(subs[i].contents[j].lnum) + "]:";
+			while (start_str.length() < 9) start_str = " " + start_str;
+			cout << start_str << subs[i].contents[j].str << endl;
+		}
+		cout << endl;
 	}
 }
 
