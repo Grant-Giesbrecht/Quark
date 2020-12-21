@@ -665,25 +665,66 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 
 		if (program[i].str.length() > 0 && program[i].str[0] == '^' && begins_with_subname(program[i].str, subs)){
 
-			//******************* ENSURE CORRECT SYNTAX ******************//
-
 			//Parse string
 			string line = program[i].str;
 			ensure_whitespace(line, "(,)");
 			vector<string> words = parse(line, " \t");
 
+			//******************* FIND SUBROUTINE IDX *******************//
+
+			//Check if first word is in subs vector
+			string sub_name = words[0].substr(1);
+			size_t sub_idx;
+			for (size_t si = 0 ; si < subs.size() ; si++){
+
+				//If a match is found, return true
+				if (subs[si].name == sub_name ) sub_idx = si;
+			}
+
+			//******************* ENSURE CORRECT SYNTAX ******************//
+
+
+
 			//Enure 3 words or more, and that second word is open paren, last is close paren
 			if (words.size() < 3 || words[1] != "(" || words[words.size()-1] != ")"){
-				cout << "ERROR: Incorrect syntax in subroutine call - parentheses are required after subroutine name. Line: " << to_string(program[i].lnum) << endl;
+				cout << "ERROR: Incorrect syntax in subroutine cal. Parentheses are required after subroutine name. Line: " << to_string(program[i].lnum) << endl;
 				return false;
 			}
 
 			//***************** GET ARGUMENTS *****************************//
 
+			//Scan through each word that could be an arugment (based on index)
+			vector<string> args;
+			bool need_comma = false;
+			for (size_t a = 2 ; a < words.size()-1 ; a++){
 
+				//Check if word is commma
+				if (words[a] == ","){
+					if (need_comma){ //Update comma flag if all is well
+						need_comma = false;
+						continue;
+					}else{ //If comma not okay, send error
+						cout << "ERROR: Incorrect syntax in subroutine call. Extraneous comma found within argument list. Line: " << to_string(program[i].lnum) << endl;
+						return false;
+					}
+				}else if(need_comma){ //Check if comma was needed but missing
+					cout << "ERROR: Incorrect syntax in subroutine call. Missing comma within argument list. Line: " << to_string(program[i].lnum) << endl;
+					return false;
+				}
 
-			//***************** GET BLOCK CONTENTS ************************//
+				//Else is an argument
+				args.push_back(words[a]);
+				need_comma = true;
+			}
 
+			//Check that correct number of arguments present
+			if (args.size() != subs[sub_idx].arguments.size()){
+				cout << "ERROR: Incorrect number of arguments in call to subroutine '" << subs[sub_idx].name << "'. Expected " << to_string(subs[sub_idx].arguments.size()) << " but found " << to_string(args.size()) << ". Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			// //***************** GET BLOCK CONTENTS ************************//
+			//
 			// //Read first line...
 			// int blocks_open = 1;
 			// vector<line> block_contents;
