@@ -666,9 +666,9 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 		if (program[i].str.length() > 0 && program[i].str[0] == '^' && begins_with_subname(program[i].str, subs)){
 
 			//Parse string
-			string line = program[i].str;
-			ensure_whitespace(line, "(,)");
-			vector<string> words = parse(line, " \t");
+			string callline = program[i].str;
+			ensure_whitespace(callline, "(,)");
+			vector<string> words = parse(callline, " \t");
 
 			//******************* FIND SUBROUTINE IDX *******************//
 
@@ -723,6 +723,29 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 				return false;
 			}
 
+			//******************** ASSEMBLE EXPANDED SUBROUTINE **************//
+
+			vector<line> fill;
+			line new_line;
+
+			//for each line in subroutine block...
+			for (size_t l = 0 ; l < subs[sub_idx].contents.size() ; l++){
+
+				new_line.str = subs[sub_idx].contents[l].str;
+				new_line.lnum = program[i].lnum;
+
+
+				//Replace each instance of each argument
+				for (size_t r = 0 ; r < subs[sub_idx].arguments.size() ; r++){
+					gstd::findAndReplace(new_line.str, subs[sub_idx].arguments[r], args[r]);
+				}
+
+				//Add new line to fill
+				trim_whitespace(new_line.str);
+				fill.push_back(new_line);
+				cout << "\t\t" << new_line.str << endl;
+			}
+
 			// //***************** GET BLOCK CONTENTS ************************//
 			//
 			// //Read first line...
@@ -746,11 +769,11 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 			// 	get_block_contents(block_contents, program[i], blocks_open, false, annotate);
 			// }
 			//
-			// //*************** COMPLETE EXPANSION OF WHILE ******************//
-			//
+			//*************** COMPLETE EXPANSION OF WHILE ******************//
+
 			// //Mark the beginning of the while loop
 			// line temp_line;
-			// temp_line.lnum = opening_line;
+			// temp_line.lnum = program[i].lnum;
 			// temp_line.str = "#HERE @START_LOOP_NUM"+to_string(opening_line);
 			// block_contents.insert(block_contents.begin(), temp_line);
 			//
@@ -762,18 +785,15 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 			// temp_line.str = "}";
 			// block_contents.push_back(temp_line);
 			//
-			// //Erase while loop
-			// if (i >= program.size()){
-			// 	program.erase(program.begin()+opening_index, program.end()+1);
-			// }else{
-			// 	program.erase(program.begin()+opening_index, program.begin()+i+1);
-			// }
-			//
-			// //Insert expanded while loop
-			// program.insert(program.begin()+opening_index, block_contents.begin(), block_contents.end());
-			//
-			// //Change program index
-			// i = opening_index + block_contents.size();
+
+			//Erase call
+			program.erase(program.begin()+i, program.begin()+i+1);
+
+			//Insert expanded while loop
+			program.insert(program.begin()+i, fill.begin(), fill.end());
+
+			//Change program index
+			i += fill.size();
 
 		}
 	}
