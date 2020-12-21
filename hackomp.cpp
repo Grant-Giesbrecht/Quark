@@ -36,13 +36,14 @@ void purge_comments(vector<line>& program, bool verbose);
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
-bool expand_subroutine_statements(vector<line>& program, bool verbose);
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
 
 //OTHER
 void print_program(vector<line> program);
 void print_subroutines(vector<subroutine> subs);
 bool get_block_contents(vector<line>& block_contents, line input, int& blocks_open, bool ignore_first_open=false, bool annotate=false);
 bool is_valid_name(string s);
+bool begins_with_subname(string line, vector<subroutine> subs);
 
 int main(int argc, char** argv){
 
@@ -151,6 +152,20 @@ int main(int argc, char** argv){
 	cout << "Program:" << endl;
 	if (verbose) print_program(program);
 
+	//The steps above this are the first few that will need to run
+
+	/*
+
+	There are probably lots of steps that need to go here
+
+
+	*/
+
+	//The steps below this are the last few that need to run
+
+	expand_subroutine_statements(program, subs, verbose, annotate);
+	cout << "SUBROUTINES EXPANDED:" << endl;
+	if (verbose) print_program(program);
 
 
 	// if (verbose) print_program(program);
@@ -630,6 +645,100 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 	return true;
 }
 
+/*
+Finds subroutine calls and expands them into AHSM code.
+Syntax rules for while statements:
+	* The subroutine name, with a carat attacted to the front, must be the first
+	  word. (ex. ^subroutine_name)
+	* The arguments must follow in parenthesis. If no arguments are taken, empty
+	  parentheses must be given. The arguments are separated by commas.
+	* Whatever is provided as each argument is drop-in replaced for the argument
+	  in the subroutine's text.
+
+Returns true if no errors occur.
+*/
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate){
+	cout << "\n\n" << endl;
+	size_t num_del = 0;
+	size_t num_inline = 0;
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		if (program[i].str.length() > 0 && program[i].str[0] == '^' && begins_with_subname(program[i].str, subs)){
+
+			//******************* ENSURE CORRECT SYNTAX ******************//
+
+			//Parse string
+			string line = program[i].str;
+			ensure_whitespace(line, "(,)");
+			vector<string> words = parse(line, " \t");
+
+			//Enure 3 words or more, and that second word is open paren, last is close paren
+			if (words.size() < 3 || words[1] != "(" || words[words.size()-1] != ")"){
+				cout << "ERROR: Incorrect syntax in subroutine call - parentheses are required after subroutine name. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//***************** GET ARGUMENTS *****************************//
+
+
+
+			//***************** GET BLOCK CONTENTS ************************//
+
+			// //Read first line...
+			// int blocks_open = 1;
+			// vector<line> block_contents;
+			// get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			// size_t opening_line = program[i].lnum;
+			// size_t opening_index = i;
+			//
+			// //Keep reading lines until entire block-contents have been read
+			// while (blocks_open > 0){
+			//
+			// 	i++; //Proceed to next line
+			//
+			// 	//Stay within no. lines in program
+			// 	if (i >= program.size()){
+			// 		cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+			// 		return false;
+			// 	}
+			//
+			// 	get_block_contents(block_contents, program[i], blocks_open, false, annotate);
+			// }
+			//
+			// //*************** COMPLETE EXPANSION OF WHILE ******************//
+			//
+			// //Mark the beginning of the while loop
+			// line temp_line;
+			// temp_line.lnum = opening_line;
+			// temp_line.str = "#HERE @START_LOOP_NUM"+to_string(opening_line);
+			// block_contents.insert(block_contents.begin(), temp_line);
+			//
+			// //Add 'jump to top' at bottom of while
+			// temp_line.str = "IFZERO {";
+			// block_contents.push_back(temp_line);
+			// temp_line.str = "\tJUMP @START_LOOP_NUM"+to_string(opening_line);
+			// block_contents.push_back(temp_line);
+			// temp_line.str = "}";
+			// block_contents.push_back(temp_line);
+			//
+			// //Erase while loop
+			// if (i >= program.size()){
+			// 	program.erase(program.begin()+opening_index, program.end()+1);
+			// }else{
+			// 	program.erase(program.begin()+opening_index, program.begin()+i+1);
+			// }
+			//
+			// //Insert expanded while loop
+			// program.insert(program.begin()+opening_index, block_contents.begin(), block_contents.end());
+			//
+			// //Change program index
+			// i = opening_index + block_contents.size();
+
+		}
+	}
+
+}
+
 
 /*
 Prints the program
@@ -644,13 +753,7 @@ void print_program(vector<line> program){
 }
 
 /*
-Prints the list of subroutines
-
-typedef struct{
-	string name;
-	vector<string> arguments;
-	vector<line> contents;
-}subroutine;
+Prints the list of subroutines.
 */
 void print_subroutines(vector<subroutine> subs){
 
@@ -771,7 +874,40 @@ bool is_valid_name(string s){
 	return true;
 }
 
+/*
+Checks if a line begins with the name of a subroutine. This function is only
+used by the expand subroutine function but helps keep the code readable. The
+subroutine name will have a caret appended to it to match the language's syntax.
 
+Accepts 'line' to check, and 'subs' as a the list of subroutines.
+
+Returns true if the first word in the line is a valid subroutine callsign.
+*/
+bool begins_with_subname(string line, vector<subroutine> subs){
+
+	//Remove arguments/parentheses
+	ensure_whitespace(line, "(,)");
+
+	//Parse string
+	vector<string> words = parse(line, " \t");
+
+	//Check words is not empty, string not zero len
+	if (words.size() < 1) return false;
+	if (words[0].length() < 1) return false;
+
+	//Check first char is caret, then remove
+	if (words[0][0] != '^') return false;
+	words[0] = words[0].substr(1);
+
+	//Check if first word is in subs vector
+	for (size_t i = 0 ; i < subs.size() ; i++){
+
+		//If a match is found, return true
+		if (subs[i].name == words[0] ) return true;
+	}
+
+	return false;
+}
 
 
 
