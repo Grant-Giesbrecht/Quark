@@ -42,15 +42,50 @@ public:
 	CompilerParams(){
 		pmem = "FLASH";
 		true_value = 1;
+		false_value = 0;
+		add_missing_halt = true;
 	}
 
 	CompilerParams(string pmem_val, int true_val){
 		pmem = pmem_val;
 		true_value = true_val;
+		false_value = 0;
+		add_missing_halt = true;
 	}
 
+	//*********************** COMPILER PARAMETERS ****************************//
+
+	/*
+	Program memory location. This is where the program will be run from in the
+	computer. THis is relevant because it specifies how commands such as copy
+	will be implemented (ex. copy RAM->RAM or FLASH->FLASH).
+	*/
 	string pmem;
+
+	/*
+	Value for 'true'. In using complex case structures, this numeric value will
+	be checked for as the 'true' condition. The keyword 'true' will also be
+	expanded to this numeric value.
+	*/
 	int true_value;
+
+	/*
+	Value for 'false'. The keyword 'false' will also be expanded to this numeric
+	value.
+
+	NOTE: This plays no real role in complex case structures, as
+	false is computationally defined as 'not true' (ie. it doesnt check that a
+	value matches this false condition, but rather if it does or doesnt match
+	the true condition ).
+	*/
+	int false_value;
+
+	/*
+
+	*/
+	bool add_missing_halt;
+
+	//*********************** MESSAGING FUNCTIONS ****************************//
 
 	void error(string err_str){
 
@@ -89,6 +124,19 @@ public:
 		messages.push_back(new_mess);
 	}
 
+	void warning(string warn_str, size_t lnum){
+
+		string start_str = CompilerParams::levelToID(2);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		warn_str = warn_str + " Line: " + to_string(lnum);
+		cout << start_str << warn_str << endl;
+		message new_mess;
+		new_mess.str = warn_str;
+		new_mess.level = 2;
+		messages.push_back(new_mess);
+	}
+
 	void info(string info_str){
 
 		string start_str = CompilerParams::levelToID(3);
@@ -101,7 +149,30 @@ public:
 		messages.push_back(new_mess);
 	}
 
+	void info(string info_str, size_t lnum){
+
+		string start_str = CompilerParams::levelToID(3);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		info_str = info_str + " Line: " + to_string(lnum);
+		cout << start_str << info_str << endl;
+		message new_mess;
+		new_mess.str = info_str;
+		new_mess.level = 3;
+		messages.push_back(new_mess);
+	}
+
 	void spam(string spam_str){
+		message new_mess;
+		new_mess.str = spam_str;
+		new_mess.level = 4;
+		messages.push_back(new_mess);
+	}
+
+	void spam(string spam_str, size_t lnum){
+
+		spam_str = spam_str + " Line: " + to_string(lnum);
+
 		message new_mess;
 		new_mess.str = spam_str;
 		new_mess.level = 4;
@@ -371,14 +442,41 @@ bool read_directives(vector<line>& program, bool verbose, bool annotate, Compile
 
 			//******************* FIND DIRECTIVE PARAMETER *******************//
 
+			cout << "\t\t" << words[1] << endl;
+
 			if (words[1] == "PROGRAM_MEMORY"){
 				params.pmem = words[3];
 				params.info("Program Memory location set to '" + words[3] + "'");
+			}else if(words[1] == "TRUE_VALUE"){
+				try{
+					int val = stoi(words[3]);
+					if (val == params.false_value){
+						params.warning("TRUE_VALUE (" + to_string(val) +") set to same value as FALSE_VALUE ("+ to_string(params.false_value)+").");
+					}
+					params.true_value = val;
+					params.info("Compiler TRUE_VALUE set to " + to_string(params.true_value));
+				}catch(...){
+					params.warning("Failed to convert '" + words[3] +  "' to an integer value for compiler parameter TRUE_VALUE.", program[i].lnum);
+				}
+			}else if(words[1] == "FALSE_VALUE"){
+				try{
+					int val = stoi(words[3]);
+					if (val == params.true_value){
+						params.warning("FALSE_VALUE (" + to_string(val) +") set to same value as TRUE_VALUE ("+ to_string(params.true_value)+").");
+					}
+					params.false_value = val;
+					params.info("Compiler FALSE_VALUE set to " + to_string(params.false_value));
+				}catch(...){
+					params.warning("Failed to convert '" + words[3] +  "' to an integer value for compiler parameter FALSE_VALUE.", program[i].lnum);
+				}
+			}else{
+				params.warning("Compiler directive '" + words[1] + "' unrecognized.");
 			}
 
 			//******************* Erase Line *******************//
 
 			program.erase(program.begin()+i); //Erase line
+			i--;
 
 		}
 
@@ -968,7 +1066,7 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 			program.insert(program.begin()+i, fill.begin(), fill.end());
 
 			//Change program index
-			i += fill.size();
+			i += fill.size(); //TODO: I think the increment system I'm using here and elsewhere is off by a few lines
 
 		}
 	}
@@ -1100,7 +1198,7 @@ bool is_valid_name(string s){
 	//Ensure first character is letter
 	if (!isalpha(s[0])) return false;
 
-	//TODO: Check 's' is not a keyword, including true or false
+	//TODO: Check 's' is not a keyword, including true or false, directives, etc
 
 	//Ensure all characters are number, letter, or underscore
 	for (size_t i = 1 ; i < s.length() ; i++){
