@@ -14,7 +14,7 @@
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 
-#define COMPILER_NAME "ELECTRON"
+#define COMPILER_NAME string("ELECTRON")
 
 using namespace std;
 using namespace gstd;
@@ -53,7 +53,24 @@ public:
 	int true_value;
 
 	void error(string err_str){
-		cout << err_str << endl;
+
+		string start_str = CompilerParams::levelToID(1);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		cout << start_str << err_str << endl;
+		message new_mess;
+		new_mess.str = err_str;
+		new_mess.level = 1;
+		messages.push_back(new_mess);
+	}
+
+	void error(string err_str, size_t lnum){
+
+		string start_str = CompilerParams::levelToID(1);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		err_str = err_str + " Line: " + to_string(lnum);
+		cout << start_str << err_str << endl;
 		message new_mess;
 		new_mess.str = err_str;
 		new_mess.level = 1;
@@ -61,7 +78,11 @@ public:
 	}
 
 	void warning(string warn_str){
-		cout << warn_str << endl;
+
+		string start_str = CompilerParams::levelToID(2);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		cout << start_str << warn_str << endl;
 		message new_mess;
 		new_mess.str = warn_str;
 		new_mess.level = 2;
@@ -69,7 +90,11 @@ public:
 	}
 
 	void info(string info_str){
-		cout << info_str << endl;
+
+		string start_str = CompilerParams::levelToID(3);
+		while (start_str.length() < 9) start_str = " " + start_str;
+
+		cout << start_str << info_str << endl;
 		message new_mess;
 		new_mess.str = info_str;
 		new_mess.level = 3;
@@ -123,10 +148,10 @@ void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
 bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
-bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
-bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
+bool expand_while_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
+bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
 
 //OTHER
 void print_program(vector<line> program);
@@ -234,19 +259,19 @@ int main(int argc, char** argv){
 	//
 	if (verbose) print_program(program);
 
-	expand_while_statements(program, verbose, annotate);
+	expand_while_statements(program, verbose, annotate, params);
 	params.spam("Expanded While Statements");
 	//
 	cout << "\nWHILE STATMENTS EXPANDED:" << endl;
 	if (verbose) print_program(program);
 
-	expand_if_statements(program, verbose, annotate);
+	expand_if_statements(program, verbose, annotate, params);
 	params.spam("Expanded If Statements");
 	//
 	cout << "\nIF STATEMENTS EXPANDED" << endl;
 	if (verbose) print_program(program);
 
-	load_subroutine_definitions(program, subs, verbose, annotate);
+	load_subroutine_definitions(program, subs, verbose, annotate, params);
 	params.spam("Loaded Subroutine Defininitions");
 	//
 	cout << "\nSUBROUTINES LOADED\n" << endl;
@@ -265,7 +290,7 @@ int main(int argc, char** argv){
 
 	//The steps below this are the last few that need to run
 
-	expand_subroutine_statements(program, subs, verbose, annotate);
+	expand_subroutine_statements(program, subs, verbose, annotate, params);
 	params.spam("Expanded Subroutine Calls");
 	//
 	cout << "SUBROUTINES EXPANDED:" << endl;
@@ -335,12 +360,12 @@ bool read_directives(vector<line>& program, bool verbose, bool annotate, Compile
 
 			//Check enough arguments present
 			if (words.size() < 4){
-				cout << "ERROR: Compiler directives require a minimum of four words. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Compiler directives require a minimum of four words. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			if (words[2] != "="){
-				cout << "ERROR: Compiler directives require an equal sign between the parameter and its value. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Compiler directives require an equal sign between the parameter and its value. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -348,8 +373,12 @@ bool read_directives(vector<line>& program, bool verbose, bool annotate, Compile
 
 			if (words[1] == "PROGRAM_MEMORY"){
 				params.pmem = words[3];
-				if (verbose) cout << COMPILER_NAME << ": Program Memory location set to '" << words[3] << "'" << endl;
+				params.info("Program Memory location set to '" + words[3] + "'");
 			}
+
+			//******************* Erase Line *******************//
+
+			program.erase(program.begin()+i); //Erase line
 
 		}
 
@@ -367,7 +396,7 @@ Syntax rules for while statements:
 		* WHILECARRY
 	* block opening bracket ({) must immediately follow while-keyword and on same line
 */
-bool expand_while_statements(vector<line>& program, bool verbose, bool annotate){
+bool expand_while_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
 
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -382,7 +411,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 			//Enure two words or more, and that second word is block-opening bracket
 			if (words.size() < 2 || words[1] != "{"){
-				cout << "ERROR: No block-opening bracket after WHILEZERO keyword. Line: " << to_string(program[i].lnum) << endl;
+				params.error("No block-opening bracket after WHILEZERO keyword. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -402,7 +431,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 				//Stay within no. lines in program
 				if (i >= program.size()){
-					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					params.error("Block starting on line " + to_string(opening_line) + " didn't close before program end.");
 					return false;
 				}
 
@@ -447,7 +476,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 			//Enure two words or more, and that second word is block-opening bracket
 			if (words.size() < 2 || words[1] != "{"){
-				cout << "ERROR: No block-opening bracket after WHILECARRY keyword. Line: " << to_string(program[i].lnum) << endl;
+				params.error("No block-opening bracket after WHILECARRY keyword. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -467,7 +496,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate)
 
 				//Stay within no. lines in program
 				if (i >= program.size()){
-					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					params.error("Block starting on line " + to_string(opening_line) + " didn't close before program end.");
 					return false;
 				}
 
@@ -518,7 +547,7 @@ Syntax rules for if statements:
 		* IFCARRY
 	* block opening bracket ({) must immediately follow if-keyword and on same line
 */
-bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
+bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
 
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -541,7 +570,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 			//Enure two words or more, and that second word is block-opening bracket
 			if (words.size() < 2 || words[1] != "{"){
-				cout << "ERROR: No block-opening bracket after IF keyword. Line: " << to_string(program[i].lnum) << endl;
+				params.error("No block-opening bracket after IF keyword. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -561,7 +590,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 				//Stay within no. lines in program
 				if (i >= program.size()){
-					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					params.error("Block starting on line " + to_string(opening_line) + " didn't close before program end.");
 					return false;
 				}
 
@@ -593,7 +622,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate){
 
 					//Stay within no. lines in program
 					if (i >= program.size()){
-						cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+						params.error("Block starting on line " + to_string(opening_line) + " didn't close before program end.");
 						return false;
 					}
 
@@ -666,7 +695,7 @@ subroutine structs, and places them in the variable 'subs'.
 
 Returns true if no errors occur.
 */
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate){
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params){
 
 	size_t num_def = 0;
 	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
@@ -683,7 +712,8 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Enure two words or more
 			if (words.size() < 5){
-				cout << "ERROR: Subroutine definition requires name, parentheses, and opening curly bracket. Line: " << to_string(program[i].lnum) << endl;
+
+				params.error("Subroutine definition requires name, parentheses, and opening curly bracket. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -691,7 +721,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Ensure valid subroutine name
 			if (!is_valid_name(words[1])){
-				cout << "ERROR: Subroutine name '" << words[1] << "' is not a permissible name. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Subroutine name '" + words[1] + "' is not a permissible name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -701,19 +731,19 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Ensure opening parentheses in right spot
 			if (words[2] != "("){
-				cout << "ERROR: Opening parentheses must be present after subroutine name. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Opening parentheses must be present after subroutine name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			//Ensure closing parentheses in right spot
 			if (words[words.size()-2] != ")"){
-				cout << "ERROR: Closed parentheses must be second to last token in subroutine definition line. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Closed parentheses must be second to last token in subroutine definition line. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			//Ensure opening bracket
 			if (words[words.size()-1] != "{"){
-				cout << "ERROR: Opening curly brackets must be last token in subroutine definition line. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Opening curly brackets must be last token in subroutine definition line. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -727,7 +757,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 						last_word = ",";
 						continue;
 					}else{
-						cout << "ERROR: comma required after argument '" << last_word << "'. Line: " << to_string(program[i].lnum) << endl;
+						params.error("comma required after argument '" + last_word + "'.", program[i].lnum);
 						return false;
 					}
 				}
@@ -753,7 +783,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 				//Stay within no. lines in program
 				if (i >= program.size()){
-					cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
+					params.error("Block starting on line " + to_string(opening_line) + " didn't close before program end.");
 					return false;
 				}
 
@@ -802,7 +832,7 @@ Syntax rules for while statements:
 
 Returns true if no errors occur.
 */
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate){
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params){
 	cout << "\n\n" << endl;
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -832,7 +862,7 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 
 			//Enure 3 words or more, and that second word is open paren, last is close paren
 			if (words.size() < 3 || words[1] != "(" || words[words.size()-1] != ")"){
-				cout << "ERROR: Incorrect syntax in subroutine cal. Parentheses are required after subroutine name. Line: " << to_string(program[i].lnum) << endl;
+				params.error("Incorrect syntax in subroutine cal. Parentheses are required after subroutine name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -849,11 +879,11 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 						need_comma = false;
 						continue;
 					}else{ //If comma not okay, send error
-						cout << "ERROR: Incorrect syntax in subroutine call. Extraneous comma found within argument list. Line: " << to_string(program[i].lnum) << endl;
+						params.error("Incorrect syntax in subroutine call. Extraneous comma found within argument list", program[i].lnum);
 						return false;
 					}
 				}else if(need_comma){ //Check if comma was needed but missing
-					cout << "ERROR: Incorrect syntax in subroutine call. Missing comma within argument list. Line: " << to_string(program[i].lnum) << endl;
+					params.error("Incorrect syntax in subroutine call. Missing comma within argument list.", program[i].lnum);
 					return false;
 				}
 
@@ -864,7 +894,7 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 
 			//Check that correct number of arguments present
 			if (args.size() != subs[sub_idx].arguments.size()){
-				cout << "ERROR: Incorrect number of arguments in call to subroutine '" << subs[sub_idx].name << "'. Expected " << to_string(subs[sub_idx].arguments.size()) << " but found " << to_string(args.size()) << ". Line: " << to_string(program[i].lnum) << endl;
+				params.error("Incorrect number of arguments in call to subroutine '" + subs[sub_idx].name + "'. Expected " + to_string(subs[sub_idx].arguments.size()) + " but found " + to_string(args.size()) + ".", program[i].lnum);
 				return false;
 			}
 
