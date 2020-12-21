@@ -14,6 +14,8 @@
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 
+#define COMPILER_NAME "ELECTRON"
+
 using namespace std;
 using namespace gstd;
 
@@ -29,10 +31,98 @@ typedef struct{
 	size_t declare_line;
 }subroutine;
 
+typedef struct{
+	int level;
+	string str;
+}message;
+
+class CompilerParams{
+public:
+
+	CompilerParams(){
+		pmem = "FLASH";
+		true_value = 1;
+	}
+
+	CompilerParams(string pmem_val, int true_val){
+		pmem = pmem_val;
+		true_value = true_val;
+	}
+
+	string pmem;
+	int true_value;
+
+	void error(string err_str){
+		cout << err_str << endl;
+		message new_mess;
+		new_mess.str = err_str;
+		new_mess.level = 1;
+		messages.push_back(new_mess);
+	}
+
+	void warning(string warn_str){
+		cout << warn_str << endl;
+		message new_mess;
+		new_mess.str = warn_str;
+		new_mess.level = 2;
+		messages.push_back(new_mess);
+	}
+
+	void info(string info_str){
+		cout << info_str << endl;
+		message new_mess;
+		new_mess.str = info_str;
+		new_mess.level = 3;
+		messages.push_back(new_mess);
+	}
+
+	void spam(string spam_str){
+		message new_mess;
+		new_mess.str = spam_str;
+		new_mess.level = 4;
+		messages.push_back(new_mess);
+	}
+
+	void printMessages(int level = 3){
+		cout << "Compiler Messages:" << endl;
+		for (size_t i =  0 ; i < messages.size() ; i++){
+			if (messages[i].level <= level){
+				string start_str = CompilerParams::levelToID( messages[i].level);
+				while (start_str.length() < 9) start_str = " " + start_str;
+				cout << start_str << messages[i].str << endl;
+			}
+		}
+	}
+
+private:
+	std::vector<message> messages;
+
+	std::string levelToID(int level){
+		switch(level){
+			case (1):
+				return "ERROR:";
+				break;
+			case(2):
+				return "WARNING:";
+				break;
+			case(3):
+				return "INFO:";
+				break;
+			case(4):
+				return "SPAM:";
+				break;
+			default:
+				return "[?]:";
+				break;
+		}
+	}
+};
+
 //PURGES
 void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
+bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate);
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate);
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate);
@@ -57,9 +147,13 @@ int main(int argc, char** argv){
 	bool annotate = false;
 	bool verbose = false;
 
+	//Initialize default compiler parameters
+	CompilerParams params;
+
 	//Get input file's name
 	if (argc < 2){
-		cout << "ERROR: Requires .HACK file's name (no spaces allowed) as input." << endl;
+
+		params.error("Requires .HACK file's name (no spaces allowed) as input.");
 		return -1;
 	}
 	string filename = argv[1];
@@ -80,7 +174,7 @@ int main(int argc, char** argv){
 			}else if(string(argv[arg]) == "-v"){
 				verbose = true;
 			}else{
-				cout << "WARNING: Ignoring unrecognized flag '" << argv[arg] << "'." << endl;
+				params.warning("Ignoring unrecognized flag '" + string(argv[arg]) + "'.");
 			}
 		}
 
@@ -99,7 +193,7 @@ int main(int argc, char** argv){
 	vector<subroutine> subs;
 	ifstream file(filename.c_str());
 	if (!file.is_open()){
-		cout << "ERROR: Failed to open file '" << filename << "'." << endl;
+		params.error("Failed to open file '" + filename + "'.");
 		return -1;
 	}
 	//
@@ -128,27 +222,35 @@ int main(int argc, char** argv){
 	if (verbose) print_program(program);
 
 	if (!keep_comments) purge_comments(program, verbose);
-
+	params.spam("Purged Comments");
+	//
 	if (verbose && !keep_comments){
 		cout << "\nCOMMENTS PURGED:" << endl;
 		if (verbose) print_program(program);
 	}
 
-	expand_while_statements(program, verbose, annotate);
+	read_directives(program, verbose, annotate, params);
+	params.spam("Read Directives");
+	//
+	if (verbose) print_program(program);
 
+	expand_while_statements(program, verbose, annotate);
+	params.spam("Expanded While Statements");
+	//
 	cout << "\nWHILE STATMENTS EXPANDED:" << endl;
 	if (verbose) print_program(program);
 
 	expand_if_statements(program, verbose, annotate);
-
+	params.spam("Expanded If Statements");
+	//
 	cout << "\nIF STATEMENTS EXPANDED" << endl;
 	if (verbose) print_program(program);
 
 	load_subroutine_definitions(program, subs, verbose, annotate);
+	params.spam("Loaded Subroutine Defininitions");
+	//
 	cout << "\nSUBROUTINES LOADED\n" << endl;
-
 	if (verbose) print_subroutines(subs);
-
 	cout << "Program:" << endl;
 	if (verbose) print_program(program);
 
@@ -164,9 +266,14 @@ int main(int argc, char** argv){
 	//The steps below this are the last few that need to run
 
 	expand_subroutine_statements(program, subs, verbose, annotate);
+	params.spam("Expanded Subroutine Calls");
+	//
 	cout << "SUBROUTINES EXPANDED:" << endl;
 	if (verbose) print_program(program);
 
+
+	cout << endl << endl;
+	params.printMessages();
 
 	// if (verbose) print_program(program);
 
@@ -209,6 +316,44 @@ void purge_comments(vector<line>& program, bool verbose){
 	}
 
 	if (verbose) cout << "Purged " << to_string(num_del) << " comment lines and " << to_string(num_inline) << " inline comments." << endl;
+
+}
+
+/*
+Reads compiler directives from program.
+*/
+bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
+
+	string directive_keyword = "#DIRECTIVE";
+
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		if (program[i].str.substr(0, directive_keyword.length()) == directive_keyword){
+
+			//Parse
+			vector<string> words = parse(program[i].str, " \t");
+
+			//Check enough arguments present
+			if (words.size() < 4){
+				cout << "ERROR: Compiler directives require a minimum of four words. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			if (words[2] != "="){
+				cout << "ERROR: Compiler directives require an equal sign between the parameter and its value. Line: " << to_string(program[i].lnum) << endl;
+				return false;
+			}
+
+			//******************* FIND DIRECTIVE PARAMETER *******************//
+
+			if (words[1] == "PROGRAM_MEMORY"){
+				params.pmem = words[3];
+				if (verbose) cout << COMPILER_NAME << ": Program Memory location set to '" << words[3] << "'" << endl;
+			}
+
+		}
+
+	}
 
 }
 
