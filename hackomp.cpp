@@ -19,11 +19,36 @@
 using namespace std;
 using namespace gstd;
 
+/*
+Describes a contiguous block of code. When the compiler converts abstract memory
+locations to physical locations, these contiguous blocks are used to determine
+the restrictions on what code can be located where.
+*/
+typedef struct{
+	size_t idx_prog_start;
+	size_t idx_prog_end;
+	string starting_AML;
+}contiguous;
+
+/*
+Describes an abstract memory location.
+*/
+typedef struct{
+	string name;
+	size_t phys_addr;
+}aml;
+
+/*
+Describes a line of code, both it contents and original line number.
+*/
 typedef struct{
 	string str;
 	size_t lnum;
 }line;
 
+/*
+Describes a macro subroutine.
+*/
 typedef struct{
 	string name;
 	vector<string> arguments;
@@ -31,6 +56,16 @@ typedef struct{
 	size_t declare_line;
 }subroutine;
 
+/*
+Describes a message from the compiler. This includes the text of the message
+and a message level.
+
+Levels:
+	1 - Error
+	2 - Warning
+	3 - Info
+	4 - Spam
+*/
 typedef struct{
 	int level;
 	string str;
@@ -224,6 +259,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate,
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
 bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
+void get_all_amls(vector<line>& program, vector<aml>& amls);
 
 //OTHER
 void print_program(vector<line> program);
@@ -367,6 +403,12 @@ int main(int argc, char** argv){
 	//
 	cout << "SUBROUTINES EXPANDED:" << endl;
 	if (verbose) print_program(program);
+
+	vector<aml> amls;
+	get_all_amls(program, amls);
+	for (size_t a = 0 ; a < amls.size() ; a++){
+		cout << amls[a].name << endl;
+	}
 
 
 	cout << endl << endl;
@@ -1027,46 +1069,6 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 				cout << "\t\t" << new_line.str << endl;
 			}
 
-			// //***************** GET BLOCK CONTENTS ************************//
-			//
-			// //Read first line...
-			// int blocks_open = 1;
-			// vector<line> block_contents;
-			// get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
-			// size_t opening_line = program[i].lnum;
-			// size_t opening_index = i;
-			//
-			// //Keep reading lines until entire block-contents have been read
-			// while (blocks_open > 0){
-			//
-			// 	i++; //Proceed to next line
-			//
-			// 	//Stay within no. lines in program
-			// 	if (i >= program.size()){
-			// 		cout << "ERROR: Block starting on line " << to_string(opening_line) << " didn't close before program end." << endl;
-			// 		return false;
-			// 	}
-			//
-			// 	get_block_contents(block_contents, program[i], blocks_open, false, annotate);
-			// }
-			//
-			//*************** COMPLETE EXPANSION OF WHILE ******************//
-
-			// //Mark the beginning of the while loop
-			// line temp_line;
-			// temp_line.lnum = program[i].lnum;
-			// temp_line.str = "#HERE @START_LOOP_NUM"+to_string(opening_line);
-			// block_contents.insert(block_contents.begin(), temp_line);
-			//
-			// //Add 'jump to top' at bottom of while
-			// temp_line.str = "IFZERO {";
-			// block_contents.push_back(temp_line);
-			// temp_line.str = "\tJUMP @START_LOOP_NUM"+to_string(opening_line);
-			// block_contents.push_back(temp_line);
-			// temp_line.str = "}";
-			// block_contents.push_back(temp_line);
-			//
-
 			//Erase call
 			program.erase(program.begin()+i, program.begin()+i+1);
 
@@ -1077,6 +1079,56 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 			i += fill.size(); //TODO: I think the increment system I'm using here and elsewhere is off by a few lines
 
 		}
+	}
+
+}
+
+/*
+Finds every abstract memory location in the program and adds them all to a list.
+When an AML is repeated, it will not be repeated in the list.
+*/
+void get_all_amls(vector<line>& program, vector<aml>& amls){
+
+	string aml_name;
+	std::vector<string> words;
+
+	//For each line in program
+	for (size_t i = 0 ; i < program.size() ; i++){
+
+		//If @ does not appear, continue to next line
+		if (program[i].str.find("@") == string::npos) continue;
+
+		//Parse into words for identification process.
+		string line_str = program[i].str;
+		ensure_whitespace(line_str, "(),=;");
+		words = parse(line_str, " \t");
+
+		//For each word...
+		for (size_t w = 0 ; w < words.size() ; w++){
+
+			//Check if it is an abstracted variable
+			if (words[w][0] == '@'){
+				aml_name = words[w].substr(1);
+
+				//If so, see if its already recorded
+				bool add_aml = true;
+				for (size_t a = 0 ; a < amls.size() ; a++){
+					if (amls[a].name == aml_name){
+						add_aml = false;
+						break;
+					}
+				}
+
+				//Add aml if new
+				if (add_aml){
+					aml new_aml;
+					new_aml.name = aml_name;
+					amls.push_back(new_aml);
+				}
+
+			}
+		}
+
 	}
 
 }
