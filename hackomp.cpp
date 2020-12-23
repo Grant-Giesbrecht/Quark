@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdio.h>
 #include <gstd.hpp>
+#include <gcolors.hpp>
 #include <fstream>
 #include <cctype>
 
@@ -139,6 +140,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(1);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = gcolor::normal + gcolor::bb + start_str;
 
 		err_str = err_str + " Line: " + to_string(lnum);
 		cout << start_str << err_str << endl;
@@ -153,7 +155,7 @@ public:
 		string start_str = CompilerParams::levelToID(2);
 		while (start_str.length() < 9) start_str = " " + start_str;
 
-		cout << start_str << warn_str << endl;
+		cout << start_str << warn_str << gcolor::normal << endl;
 		message new_mess;
 		new_mess.str = warn_str;
 		new_mess.level = 2;
@@ -166,7 +168,7 @@ public:
 		while (start_str.length() < 9) start_str = " " + start_str;
 
 		warn_str = warn_str + " Line: " + to_string(lnum);
-		cout << start_str << warn_str << endl;
+		cout << start_str << warn_str << gcolor::normal << endl;
 		message new_mess;
 		new_mess.str = warn_str;
 		new_mess.level = 2;
@@ -178,7 +180,7 @@ public:
 		string start_str = CompilerParams::levelToID(3);
 		while (start_str.length() < 9) start_str = " " + start_str;
 
-		cout << start_str << info_str << endl;
+		cout << start_str << info_str << gcolor::normal << endl;
 		message new_mess;
 		new_mess.str = info_str;
 		new_mess.level = 3;
@@ -191,7 +193,7 @@ public:
 		while (start_str.length() < 9) start_str = " " + start_str;
 
 		info_str = info_str + " Line: " + to_string(lnum);
-		cout << start_str << info_str << endl;
+		cout << start_str << info_str << gcolor::normal << endl;
 		message new_mess;
 		new_mess.str = info_str;
 		new_mess.level = 3;
@@ -221,7 +223,7 @@ public:
 			if (messages[i].level <= level){
 				string start_str = CompilerParams::levelToID( messages[i].level);
 				while (start_str.length() < 9) start_str = " " + start_str;
-				cout << start_str << messages[i].str << endl;
+				cout << start_str << messages[i].str << gcolor::normal << endl;
 			}
 		}
 	}
@@ -232,13 +234,13 @@ private:
 	std::string levelToID(int level){
 		switch(level){
 			case (1):
-				return "ERROR:";
+				return gcolor::normal + gcolor::red + "ERROR:";
 				break;
 			case(2):
-				return "WARNING:";
+				return gcolor::normal + gcolor::blue + "WARNING:";
 				break;
 			case(3):
-				return "INFO:";
+				return gcolor::normal + gcolor::blue + "INFO:";
 				break;
 			case(4):
 				return "SPAM:";
@@ -260,6 +262,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, Co
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
 bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
 void get_all_amls(vector<line>& program, vector<aml>& amls);
+void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<aml> amls);
 
 //OTHER
 void print_program(vector<line> program);
@@ -324,6 +327,7 @@ int main(int argc, char** argv){
 	//Read file into 'program' vector. Keeps every non-blank line (incl. comments)
 	vector<line> program;
 	vector<subroutine> subs;
+	vector<aml> amls;
 	ifstream file(filename.c_str());
 	if (!file.is_open()){
 		params.error("Failed to open file '" + filename + "'.");
@@ -404,11 +408,16 @@ int main(int argc, char** argv){
 	cout << "SUBROUTINES EXPANDED:" << endl;
 	if (verbose) print_program(program);
 
-	vector<aml> amls;
+
 	get_all_amls(program, amls);
 	for (size_t a = 0 ; a < amls.size() ; a++){
 		cout << amls[a].name << endl;
 	}
+
+
+	get_contiguous_blocks(program, params, amls);
+
+	// assign_physical_locations(program, verbose, params, amls);
 
 
 	cout << endl << endl;
@@ -1133,6 +1142,38 @@ void get_all_amls(vector<line>& program, vector<aml>& amls){
 
 }
 
+/*
+
+*/
+void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<aml> amls){
+
+	vector<contiguous> contigs;
+
+	//Initialize temp contiguous struct
+	contiguous new_contig;
+	new_contig.idx_prog_start = 0;
+	new_contig.starting_AML = "";
+
+	//For each line of program
+	for (size_t i = 0 ; i < program.size() ; i++ ){
+
+		//Check if a gap due to if-structure's jump ends here
+		if (program[i].str.substr(0, 15) == "#HERE @TRUE_IF_"){
+
+			if (i == 0){
+				params.warning("");
+			}
+
+			//Record line number
+			new_contig.idx_prog_end = i-1;
+			contigs.push_back(new_contig);
+
+
+		}
+
+	}
+
+}
 
 /*
 Prints the program
