@@ -1,21 +1,28 @@
-/*
-*/
+/*******************************************************************************
+This is the Quark compiler.
+
+Syntax:
+
+G Giesbrecht
+16-1-2021
+
+*******************************************************************************/
 
 #include <iostream>
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <gstd.hpp>
-#include <gcolors.hpp>
+#include <gstd/gstd.hpp>
+#include <gstd/gcolors.hpp>
 #include <fstream>
 #include <cctype>
 
-//CXCOMPILE g++ hackomp.cpp -o hackomp -lgstd -std=c++11
-//CXCOMPILE ./hackomp hacksembly.hack -v
+//CXCOMPILE g++ quark_comp.cpp -o quark_comp -lgstd -std=c++11
+//CXCOMPILE ./quark_comp dev.qrk -v
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 
-#define COMPILER_NAME string("ELECTRON")
+#define COMPILER_NAME string("QUARK")
 
 using namespace std;
 using namespace gstd;
@@ -257,6 +264,7 @@ void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
 bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
+bool check_isv(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
 bool expand_while_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
 bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
@@ -289,7 +297,7 @@ int main(int argc, char** argv){
 	//Get input file's name
 	if (argc < 2){
 
-		params.error("Requires .HACK file's name (no spaces allowed) as input.");
+		params.error("Requires .qrk file's name (no spaces allowed) as input.");
 		return -1;
 	}
 	string filename = argv[1];
@@ -409,9 +417,10 @@ int main(int argc, char** argv){
 	if (verbose) print_program(program);
 
 
+	cout << "\nAbstract Memory Locations:" << endl;
 	get_all_amls(program, amls);
 	for (size_t a = 0 ; a < amls.size() ; a++){
-		cout << amls[a].name << endl;
+		cout << "\t" << amls[a].name << endl;
 	}
 
 

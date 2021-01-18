@@ -17,8 +17,9 @@ Quark uses a few different types of files:
 * _Machine Code Binary (.mcb)_: Same as above, except instructions and data must
 	all have explicitly defined individual addresses, and all instructions and
 	data are formatted in ASCII binary (1 and 0 characters, not binary file).
-* _Instruction Set File (.isf)_: Specifies the CPU's instruction set. This file
+* _Instruction Set Source (.isf || .iss)_: Specifies the CPU's instruction set. This file
 	is also used by the control matrix generator program. This file specifies
 	how each control line must be set during each phase of each instruction,
 	along with the number of data bits for the instruction, the instruction's
 	binary representation, an optional description (and perhaps more).
+* _Instruction Set Matrix (.isb || .ism)_:
