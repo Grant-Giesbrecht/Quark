@@ -4,6 +4,10 @@
 
 * Everything after `//` is a comment and is ignored by the compiler. This works both for comment lines and inline comments.
 
+## Directives
+
+
+
 ## While Statements:
 
 * While-statements are collapsed into equivalent if-statements.
@@ -54,6 +58,16 @@ An ISR is a specific type of subroutine which is triggered by an interrupt.
 
 Fill this in later.
 
+## List of Compiler Option Directives:
+
+* `PROGRAM_MEMORY`: Program memory value (string)
+* `TRUE_VALUE`: Integer value for 'TRUE' condition in conditional checks. Also used as replacement for 'True' keyword.
+* `FALSE_VALUE`: Integer value for 'FALSE' keyword. Note this is not used in conditional checks, as false is defined logically as 'not true'.
+* `ADD_MISSING_HALT`: boolean value. If true, compiler adds a `HALT` instruction at end of program if not present.
+
+Example: `#OPTION FALSE_VALUE 14`
+
+
 ## List of Symbols and Keywords:
 
 * `=`: Assigns the numeric value on the RHS to the specified value (LHS must be a memory location, including abstract memory locations).
@@ -64,4 +78,8 @@ Fill this in later.
  * `#HERE @aml_name;ADD` Makes AML 'aml_name' refer to line of instruction `ADD`.
 * `#SUBROUTINE`: Declares a subroutine
 * `#ISR`: Declares a subroutine with ISR requirements.
-*
+* `#OPTION`: Compiler option directive. Followed by option name and value.
+
+## ISV
+
+* ISV series name is a string, it must be contiguous (no whitespace), and cannot have periods within.

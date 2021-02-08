@@ -12,13 +12,13 @@ G Giesbrecht
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <gstd/gstd.hpp>
-#include <gstd/gcolors.hpp>
+#include <gstd.hpp>
+#include <gcolors.hpp>
 #include <fstream>
 #include <cctype>
 
 //CXCOMPILE g++ quark_comp.cpp -o quark_comp -lgstd -std=c++11
-//CXCOMPILE ./quark_comp dev.qrk -v
+//CXCOMPILE ./quark_comp Source\ Files/dev.qrk -v -info
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 
@@ -83,17 +83,34 @@ class CompilerParams{
 public:
 
 	CompilerParams(){
-		pmem = "FLASH";
-		true_value = 1;
-		false_value = 0;
-		add_missing_halt = true;
+		default_init();
 	}
 
 	CompilerParams(string pmem_val, int true_val){
+
+		default_init();
+
 		pmem = pmem_val;
 		true_value = true_val;
+	}
+
+	void default_init(){
+		pmem = "FLASH0";
+		true_value = 1;
 		false_value = 0;
 		add_missing_halt = true;
+
+		isv_series = "Unspecified";
+		isv_major = -1;
+		isv_minor = -1;
+		isv_patch = -1;
+
+		keep_comments = false;
+		annotate = false;
+		verbose = false;
+
+		print_level = 2;
+		quit_on_error = false;
 	}
 
 	//*********************** COMPILER PARAMETERS ****************************//
@@ -103,7 +120,7 @@ public:
 	computer. THis is relevant because it specifies how commands such as copy
 	will be implemented (ex. copy RAM->RAM or FLASH->FLASH).
 	*/
-	string pmem;
+	string pmem; //TODO: Is this used?
 
 	/*
 	Value for 'true'. In using complex case structures, this numeric value will
@@ -129,12 +146,52 @@ public:
 	*/
 	bool add_missing_halt;
 
+	/*
+	ISV specifier. Quark checks that a valid ISV specifier is present, but does
+	not currently verify that the code is compliant with that version (this may
+	be added later).
+	*/
+	string isv_series;
+	int isv_major;
+	int isv_minor;
+	int isv_patch;
+
+	/*
+	If true, leaves comments throughout each step of compilation and in the
+	output files.
+	*/
+	bool keep_comments;
+
+	/*
+	If true, annotates the output with comments as the compiler performs various
+	operations such as code expansions.
+	*/
+	bool annotate;
+
+	/*
+	Determines if the compiler should have verbose output
+	*/
+	bool verbose;
+
+	/*
+	Specifies a level of log levels to print
+	*/
+	int print_level;
+
+	/*
+	If true, Quark aborts if any error occurs.
+
+	TODO: This is not yet implemented
+	*/
+	bool quit_on_error;
+
 	//*********************** MESSAGING FUNCTIONS ****************************//
 
 	void error(string err_str){
 
 		string start_str = CompilerParams::levelToID(1);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = CompilerParams::levelToFormat(1) + start_str + gcolor::normal;
 
 		cout << start_str << err_str << endl;
 		message new_mess;
@@ -147,7 +204,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(1);
 		while (start_str.length() < 9) start_str = " " + start_str;
-		start_str = gcolor::normal + gcolor::bb + start_str;
+		start_str = CompilerParams::levelToFormat(1) + start_str + gcolor::normal;
 
 		err_str = err_str + " Line: " + to_string(lnum);
 		cout << start_str << err_str << endl;
@@ -161,6 +218,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(2);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = CompilerParams::levelToFormat(2) + start_str + gcolor::normal;
 
 		cout << start_str << warn_str << gcolor::normal << endl;
 		message new_mess;
@@ -173,6 +231,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(2);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = CompilerParams::levelToFormat(2) + start_str + gcolor::normal;
 
 		warn_str = warn_str + " Line: " + to_string(lnum);
 		cout << start_str << warn_str << gcolor::normal << endl;
@@ -186,6 +245,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(3);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = CompilerParams::levelToFormat(3) + start_str + gcolor::normal;
 
 		cout << start_str << info_str << gcolor::normal << endl;
 		message new_mess;
@@ -198,6 +258,7 @@ public:
 
 		string start_str = CompilerParams::levelToID(3);
 		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = CompilerParams::levelToFormat(3) + start_str + gcolor::normal;
 
 		info_str = info_str + " Line: " + to_string(lnum);
 		cout << start_str << info_str << gcolor::normal << endl;
@@ -224,13 +285,21 @@ public:
 		messages.push_back(new_mess);
 	}
 
-	void printMessages(int level = 3){
+	/*
+	Prints messages at the specified level
+
+	level - print level
+	isExactly - if true, only prints messages at the level and not those also
+		higher.
+	*/
+	void printMessages(int level = 3, bool isExactly=false){
 		cout << "Compiler Messages:" << endl;
 		for (size_t i =  0 ; i < messages.size() ; i++){
-			if (messages[i].level <= level){
+			if (messages[i].level == level || (!isExactly && messages[i].level <= level)){
 				string start_str = CompilerParams::levelToID( messages[i].level);
 				while (start_str.length() < 9) start_str = " " + start_str;
-				cout << start_str << messages[i].str << gcolor::normal << endl;
+				start_str = CompilerParams::levelToFormat(messages[i].level) + start_str + gcolor::normal;
+				cout << start_str << messages[i].str << endl;
 			}
 		}
 	}
@@ -241,13 +310,13 @@ private:
 	std::string levelToID(int level){
 		switch(level){
 			case (1):
-				return gcolor::normal + gcolor::red + "ERROR:";
+				return "ERROR:";
 				break;
 			case(2):
-				return gcolor::normal + gcolor::blue + "WARNING:";
+				return "WARNING:";
 				break;
 			case(3):
-				return gcolor::normal + gcolor::blue + "INFO:";
+				return "INFO:";
 				break;
 			case(4):
 				return "SPAM:";
@@ -257,18 +326,38 @@ private:
 				break;
 		}
 	}
+
+	std::string levelToFormat(int level){
+		switch(level){
+			case (1):
+				return gcolor::normal + gcolor::red +gcolor::bb;
+				break;
+			case(2):
+				return gcolor::normal + gcolor::red;
+				break;
+			case(3):
+				return gcolor::normal + gcolor::blue;
+				break;
+			case(4):
+				return gcolor::normal;
+				break;
+			default:
+				return gcolor::normal;
+				break;
+		}
+	}
 };
 
 //PURGES
 void purge_comments(vector<line>& program, bool verbose);
 
 //EXPANSIONS
-bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
-bool check_isv(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
-bool expand_while_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
-bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params);
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params);
+bool check_isv(vector<line>& program, CompilerParams& params);
+bool read_options(vector<line>& program, CompilerParams& params);
+bool expand_while_statements(vector<line>& program, CompilerParams& params);
+bool expand_if_statements(vector<line>& program, CompilerParams& params);
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
 void get_all_amls(vector<line>& program, vector<aml>& amls);
 void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<aml> amls);
 
@@ -287,9 +376,7 @@ int main(int argc, char** argv){
 	bool save_ahsm = false; //Tell compiler to save .AHSM file
 	bool save_hsm = false;
 
-	bool keep_comments = false;
-	bool annotate = false;
-	bool verbose = false;
+
 
 	//Initialize default compiler parameters
 	CompilerParams params;
@@ -312,11 +399,19 @@ int main(int argc, char** argv){
 			}else if(string(argv[arg]) == "-hsm"){
 				save_hsm = true;
 			}else if(string(argv[arg]) == "-c"){
-				keep_comments = true;
+				params.keep_comments = true;
 			}else if(string(argv[arg]) == "-n"){
-				annotate = true;
+				params.annotate = true;
 			}else if(string(argv[arg]) == "-v"){
-				verbose = true;
+				params.verbose = true;
+			}else if(string(argv[arg]) == "-error"){
+				params.print_level = 1;
+			}else if(string(argv[arg]) == "-warning"){
+				params.print_level = 2;
+			}else if(string(argv[arg]) == "-info"){
+				params.print_level = 3;
+			}else if(string(argv[arg]) == "-spam"){
+				params.print_level = 4;
 			}else{
 				params.warning("Ignoring unrecognized flag '" + string(argv[arg]) + "'.");
 			}
@@ -362,42 +457,49 @@ int main(int argc, char** argv){
 	//***********************************************************************//
 	//*************************** EXPAND, COMPILE, ETC **********************//
 
+	bool step_failed = false;
 
 	cout << "ORIGINAL: " << endl;
-	if (verbose) print_program(program);
+	if (params.verbose) print_program(program);
 
-	if (!keep_comments) purge_comments(program, verbose);
+	if (!params.keep_comments) purge_comments(program, params.verbose);
 	params.spam("Purged Comments");
-	//
-	if (verbose && !keep_comments){
+	if (params.verbose && !params.keep_comments){
 		cout << "\nCOMMENTS PURGED:" << endl;
-		if (verbose) print_program(program);
+		if (params.verbose) print_program(program);
 	}
 
-	read_directives(program, verbose, annotate, params);
-	params.spam("Read Directives");
-	//
-	if (verbose) print_program(program);
+	if (!read_options(program, params)){
+		step_failed = true;
+	}
+	params.spam("Read Option Directives");
+	if (params.verbose) print_program(program);
 
-	expand_while_statements(program, verbose, annotate, params);
+
+	if (!check_isv(program, params)){
+		step_failed = true;
+	}
+
+	if (!expand_while_statements(program, params)){
+		step_failed = true;
+	}
 	params.spam("Expanded While Statements");
-	//
-	cout << "\nWHILE STATMENTS EXPANDED:" << endl;
-	if (verbose) print_program(program);
+	if (params.verbose) print_program(program);
 
-	expand_if_statements(program, verbose, annotate, params);
+
+	if (!expand_if_statements(program, params)){
+		step_failed = true;
+	}
 	params.spam("Expanded If Statements");
-	//
-	cout << "\nIF STATEMENTS EXPANDED" << endl;
-	if (verbose) print_program(program);
+	if (params.verbose) print_program(program);
 
-	load_subroutine_definitions(program, subs, verbose, annotate, params);
+
+	if (!load_subroutine_definitions(program, subs, params)){
+		step_failed = true;
+	}
 	params.spam("Loaded Subroutine Defininitions");
-	//
-	cout << "\nSUBROUTINES LOADED\n" << endl;
-	if (verbose) print_subroutines(subs);
-	cout << "Program:" << endl;
-	if (verbose) print_program(program);
+	if (params.verbose) print_subroutines(subs);
+	if (params.verbose) print_program(program);
 
 	//The steps above this are the first few that will need to run
 
@@ -410,14 +512,13 @@ int main(int argc, char** argv){
 
 	//The steps below this are the last few that need to run
 
-	expand_subroutine_statements(program, subs, verbose, annotate, params);
+	if (!expand_subroutine_statements(program, subs, params)){
+		step_failed = true;
+	}
 	params.spam("Expanded Subroutine Calls");
-	//
-	cout << "SUBROUTINES EXPANDED:" << endl;
-	if (verbose) print_program(program);
+	if (params.verbose) print_program(program);
 
 
-	cout << "\nAbstract Memory Locations:" << endl;
 	get_all_amls(program, amls);
 	for (size_t a = 0 ; a < amls.size() ; a++){
 		cout << "\t" << amls[a].name << endl;
@@ -430,11 +531,10 @@ int main(int argc, char** argv){
 
 
 	cout << endl << endl;
-	params.printMessages();
+	params.printMessages(params.print_level);
 
-	// if (verbose) print_program(program);
-
-
+	// if (params.verbose) print_program(program);
+	
 	return 0;
 }
 
@@ -477,11 +577,57 @@ void purge_comments(vector<line>& program, bool verbose){
 }
 
 /*
-Reads compiler directives from program.
+Reads the ISV directive at the top of the program and verifies that it follows the
+correct syntax. Expects '#ISV series_name_no_whitespace_or_period <major>.<minor>.<patch>'
 */
-bool read_directives(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
+bool check_isv(vector<line>& program, CompilerParams& params){
 
-	string directive_keyword = "#DIRECTIVE";
+	string isv_keyword = "#ISV";
+
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		if (program[i].str.substr(0, isv_keyword.length()) == isv_keyword){
+
+			string temp_line = program[i].str;
+			ensure_whitespace(temp_line, ".");
+			cout << temp_line << endl;
+			vector<string> words = parse(temp_line, " \t");
+
+			//Check enough arguments present
+			if (words.size() < 7){
+				params.error("ISV specifier in incorrect format. Must contain series name and 3-digit version number. Line: " + to_string(program[i].lnum));
+				return false;
+			}
+
+			params.isv_series = words[1];
+
+			try{
+				params.isv_major = stoi(words[2]);
+				params.isv_minor = stoi(words[4]);
+				params.isv_patch = stoi(words[6]);
+			}catch(const std::invalid_argument& ia){
+				params.isv_major = -1;
+				params.isv_minor = -1;
+				params.isv_patch = -1;
+				params.error("Failed to read 3-digit version number in ISV specifier. Line: " + to_string(program[i].lnum));
+				return false;
+			}
+
+			params.info("Design ISV = " + params.isv_series + " " + to_string(params.isv_major) + "." + to_string(params.isv_minor) + "." + to_string(params.isv_patch));
+
+
+		}
+
+	}
+
+}
+
+/*
+Reads compiler option directives from program.
+*/
+bool read_options(vector<line>& program, CompilerParams& params){
+
+	string directive_keyword = "#OPTION";
 
 	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
 
@@ -492,12 +638,12 @@ bool read_directives(vector<line>& program, bool verbose, bool annotate, Compile
 
 			//Check enough arguments present
 			if (words.size() < 4){
-				params.error("Compiler directives require a minimum of four words. Line: " + to_string(program[i].lnum));
+				params.error("Compiler option directives require a minimum of four words. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			if (words[2] != "="){
-				params.error("Compiler directives require an equal sign between the parameter and its value. Line: " + to_string(program[i].lnum));
+				params.error("Compiler option directives require an equal sign between the parameter and its value. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -562,7 +708,7 @@ Syntax rules for while statements:
 		* WHILECARRY
 	* block opening bracket ({) must immediately follow while-keyword and on same line
 */
-bool expand_while_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
+bool expand_while_statements(vector<line>& program, CompilerParams& params){
 
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -586,7 +732,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate,
 			//Read first line...
 			int blocks_open = 1;
 			vector<line> block_contents;
-			get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			get_block_contents(block_contents, program[i], blocks_open, true, params.annotate); //Get any block-contents after block-opening character
 			size_t opening_line = program[i].lnum;
 			size_t opening_index = i;
 
@@ -601,7 +747,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate,
 					return false;
 				}
 
-				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
+				get_block_contents(block_contents, program[i], blocks_open, false, params.annotate);
 			}
 
 			//*************** COMPLETE EXPANSION OF WHILE ******************//
@@ -651,7 +797,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate,
 			//Read first line...
 			int blocks_open = 1;
 			vector<line> block_contents;
-			get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			get_block_contents(block_contents, program[i], blocks_open, true, params.annotate); //Get any block-contents after block-opening character
 			size_t opening_line = program[i].lnum;
 			size_t opening_index = i;
 
@@ -666,7 +812,7 @@ bool expand_while_statements(vector<line>& program, bool verbose, bool annotate,
 					return false;
 				}
 
-				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
+				get_block_contents(block_contents, program[i], blocks_open, false, params.annotate);
 			}
 
 			//*************** COMPLETE EXPANSION OF WHILE ******************//
@@ -713,7 +859,7 @@ Syntax rules for if statements:
 		* IFCARRY
 	* block opening bracket ({) must immediately follow if-keyword and on same line
 */
-bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, CompilerParams& params){
+bool expand_if_statements(vector<line>& program, CompilerParams& params){
 
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -745,7 +891,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, Co
 			//Read first line...
 			int blocks_open = 1;
 			vector<line> block_contents;
-			get_block_contents(block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			get_block_contents(block_contents, program[i], blocks_open, true, params.annotate); //Get any block-contents after block-opening character
 			size_t opening_line = program[i].lnum;
 			size_t opening_index = i;
 
@@ -760,7 +906,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, Co
 					return false;
 				}
 
-				get_block_contents(block_contents, program[i], blocks_open, false, annotate);
+				get_block_contents(block_contents, program[i], blocks_open, false, params.annotate);
 			}
 
 			//************ CHECK IF ELSE STATEMENT PROVIDED ****************//
@@ -779,7 +925,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, Co
 				//Read else block
 
 				//Read first line...
-				get_block_contents(else_block_contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+				get_block_contents(else_block_contents, program[i], blocks_open, true, params.annotate); //Get any block-contents after block-opening character
 
 				//Keep reading lines until entire block-contents have been read
 				while (blocks_open > 0){
@@ -792,7 +938,7 @@ bool expand_if_statements(vector<line>& program, bool verbose, bool annotate, Co
 						return false;
 					}
 
-					get_block_contents(else_block_contents, program[i], blocks_open, false, annotate);
+					get_block_contents(else_block_contents, program[i], blocks_open, false, params.annotate);
 				}
 			}
 
@@ -861,7 +1007,7 @@ subroutine structs, and places them in the variable 'subs'.
 
 Returns true if no errors occur.
 */
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params){
+bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, CompilerParams& params){
 
 	size_t num_def = 0;
 	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
@@ -938,7 +1084,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Read first line...
 			int blocks_open = 1;
-			get_block_contents(temp_sr.contents, program[i], blocks_open, true, annotate); //Get any block-contents after block-opening character
+			get_block_contents(temp_sr.contents, program[i], blocks_open, true, params.annotate); //Get any block-contents after block-opening character
 			size_t opening_line = program[i].lnum;
 			size_t opening_index = i;
 
@@ -953,7 +1099,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 					return false;
 				}
 
-				get_block_contents(temp_sr.contents, program[i], blocks_open, false, annotate);
+				get_block_contents(temp_sr.contents, program[i], blocks_open, false, params.annotate);
 			}
 
 
@@ -967,7 +1113,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 			}
 
 			//Insert comment if requested
-			if (annotate){
+			if (params.annotate){
 				line temp_line;
 				temp_line.lnum = opening_line;
 				temp_line.str = "//HKOMP: Subroutine definition. Name: '" + temp_sr.name + "' Arguments: " + to_string(temp_sr.arguments.size()) + " Block size: " + to_string(temp_sr.contents.size());
@@ -976,7 +1122,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Change program index
 			i = opening_index;
-			if (!annotate) i--;
+			if (!params.annotate) i--;
 
 			subs.push_back(temp_sr);
 
@@ -998,7 +1144,7 @@ Syntax rules for while statements:
 
 Returns true if no errors occur.
 */
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, bool verbose, bool annotate, CompilerParams& params){
+bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, CompilerParams& params){
 	cout << "\n\n" << endl;
 	size_t num_del = 0;
 	size_t num_inline = 0;
