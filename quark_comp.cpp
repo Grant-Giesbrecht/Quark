@@ -16,8 +16,9 @@ G Giesbrecht
 #include <gcolors.hpp>
 #include <fstream>
 #include <cctype>
+#include <ktable.hpp>
 
-//CXCOMPILE g++ quark_comp.cpp -o quark_comp -lgstd -std=c++11
+//CXCOMPILE g++ quark_comp.cpp -o quark_comp -lgstd -std=c++11 -lktable
 //CXCOMPILE ./quark_comp Source\ Files/dev.qrk -v -info
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
@@ -44,6 +45,8 @@ Describes an abstract memory location.
 typedef struct{
 	string name;
 	size_t phys_addr;
+	bool addr_assigned;
+	size_t source_line;
 }aml;
 
 /*
@@ -293,7 +296,7 @@ public:
 		higher.
 	*/
 	void printMessages(int level = 3, bool isExactly=false){
-		cout << "Compiler Messages:" << endl;
+		cout << "Compiler Messages:\t\tlvl=" + to_string(level) << endl;
 		for (size_t i =  0 ; i < messages.size() ; i++){
 			if (messages[i].level == level || (!isExactly && messages[i].level <= level)){
 				string start_str = CompilerParams::levelToID( messages[i].level);
@@ -359,14 +362,18 @@ bool expand_if_statements(vector<line>& program, CompilerParams& params);
 bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
 bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
 void get_all_amls(vector<line>& program, vector<aml>& amls);
-void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<aml> amls);
+void get_contiguous_blocks(vector<line>& program, CompilerParams& params, vector<aml> amls, vector<contiguous>& contigs);
 
 //OTHER
-void print_program(vector<line> program);
+void print_program(vector<line> program, string options="");
+void rich_print_program(vector<line> program, vector<contiguous> contigs, CompilerParams& params, string options="");
 void print_subroutines(vector<subroutine> subs);
+void print_amls(vector<aml> amls);
+void print_contiguous(vector<contiguous> contiguous);
 bool get_block_contents(vector<line>& block_contents, line input, int& blocks_open, bool ignore_first_open=false, bool annotate=false);
 bool is_valid_name(string s);
 bool begins_with_subname(string line, vector<subroutine> subs);
+
 
 int main(int argc, char** argv){
 
@@ -431,6 +438,7 @@ int main(int argc, char** argv){
 	vector<line> program;
 	vector<subroutine> subs;
 	vector<aml> amls;
+	vector<contiguous> contigs;
 	ifstream file(filename.c_str());
 	if (!file.is_open()){
 		params.error("Failed to open file '" + filename + "'.");
@@ -516,16 +524,16 @@ int main(int argc, char** argv){
 		step_failed = true;
 	}
 	params.spam("Expanded Subroutine Calls");
-	if (params.verbose) print_program(program);
-
+	if (params.verbose) print_program(program, "i");
 
 	get_all_amls(program, amls);
-	for (size_t a = 0 ; a < amls.size() ; a++){
-		cout << "\t" << amls[a].name << endl;
-	}
+	if (params.verbose) print_amls(amls);
 
 
-	get_contiguous_blocks(program, params, amls);
+	get_contiguous_blocks(program, params, amls, contigs);
+	if (params.verbose) print_contiguous(contigs);
+
+	rich_print_program(program, contigs, params);
 
 	// assign_physical_locations(program, verbose, params, amls);
 
@@ -534,7 +542,7 @@ int main(int argc, char** argv){
 	params.printMessages(params.print_level);
 
 	// if (params.verbose) print_program(program);
-	
+
 	return 0;
 }
 
@@ -1287,6 +1295,9 @@ void get_all_amls(vector<line>& program, vector<aml>& amls){
 				if (add_aml){
 					aml new_aml;
 					new_aml.name = aml_name;
+					new_aml.phys_addr = 0;
+					new_aml.addr_assigned = false;
+					new_aml.source_line = program[i].lnum;
 					amls.push_back(new_aml);
 				}
 
@@ -1299,15 +1310,17 @@ void get_all_amls(vector<line>& program, vector<aml>& amls){
 
 /*
 
+NOTE: This defines contiguous blocks based on `INDEX` and NOT line number. This means
+as soon as new code is added or any modifications are made, this must be recalculated. As
+such, this should be run right at the end, before phyiscal addresses are assigned.
 */
-void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<aml> amls){
+void get_contiguous_blocks(vector<line>& program, CompilerParams& params, vector<aml> amls, vector<contiguous>& contigs){
 
-	vector<contiguous> contigs;
 
 	//Initialize temp contiguous struct
 	contiguous new_contig;
 	new_contig.idx_prog_start = 0;
-	new_contig.starting_AML = "";
+	new_contig.starting_AML = " --- ";
 
 	//For each line of program
 	for (size_t i = 0 ; i < program.size() ; i++ ){
@@ -1316,30 +1329,72 @@ void get_contiguous_blocks(vector<line>& program, CompilerParams params, vector<
 		if (program[i].str.substr(0, 15) == "#HERE @TRUE_IF_"){
 
 			if (i == 0){
-				params.warning("");
+				params.warning("Skipped continuous block indicator ('#HERE @TRUE_IF_') on line 0. No preceeding block. There is probably an error in the compiled code.");
+				continue;
 			}
 
 			//Record line number
 			new_contig.idx_prog_end = i-1;
 			contigs.push_back(new_contig);
 
+			//Start new contiguous block
+			new_contig.idx_prog_start = i;
+			new_contig.starting_AML = program[i].str.substr(7);
+
 
 		}
 
 	}
 
+	new_contig.idx_prog_end = program.size()-1;
+	contigs.push_back(new_contig);
 }
 
 /*
-Prints the program
+Prints the program.
+
+Options:
+i - print index in addition to line number
 */
-void print_program(vector<line> program){
+void print_program(vector<line> program, string options){
+
+	bool print_index = (options.find("i") != string::npos);
+
+
 	string start_str;
 	for (size_t i = 0 ; i < program.size() ; i++){
-		start_str = "[" + to_string(program[i].lnum) + "]: ";
-		while (start_str.length() < 9) start_str = " " + start_str;
+		start_str = "[" + to_string(program[i].lnum) + "]";
+		if (print_index) start_str = start_str + ", " + to_string(i);
+		while (start_str.length() < 10) start_str = " " + start_str;
+		start_str = start_str + ": ";
 		cout << start_str << program[i].str << endl;
 	}
+}
+
+/*
+Runs print_program with additional information displayed such as contiguous
+block visualizations.
+*/
+void rich_print_program(vector<line> program, vector<contiguous> contigs, CompilerParams& params, string options){
+
+	for (size_t c = 0 ; c < contigs.size() ; c++){
+
+		// cout << "BLOCK " + to_string(c) << endl;
+
+		if (contigs[c].idx_prog_end > program.size() || contigs[c].idx_prog_start > program.size()){
+			params.error("Quark compiler caused an error. Contiguous block larger than program detected in program print operation.");
+		}
+
+		vector<line>::const_iterator first = program.begin() + contigs[c].idx_prog_start;
+		vector<line>::const_iterator last = program.begin() + contigs[c].idx_prog_end;
+		vector<line> subvec(first, last);
+
+		print_program(subvec, options);
+		if (c+1 < contigs.size()){
+			cout << "\t\t.\n\t\t.\n\t\t." << endl;
+		}
+	}
+
 }
 
 /*
@@ -1367,6 +1422,53 @@ void print_subroutines(vector<subroutine> subs){
 		}
 		cout << endl;
 	}
+}
+
+/*
+Print table of AMLs
+*/
+void print_amls(vector<aml> amls){
+
+	KTable kt;
+	kt.table_title("Abstracted Memory Locations:");
+	kt.row({"AML Name", "Physical Address", "Source Line"});
+
+	// cout << "ABSTRACTED MEMORY LOCATIONS:" << endl;
+	for (size_t a = 0 ; a < amls.size() ; a++){
+
+		string paddr = to_string(amls[a].phys_addr);
+		if (!amls[a].addr_assigned){
+			paddr = " ----- ";
+		}
+
+		kt.row({amls[a].name, paddr, to_string(amls[a].source_line)});
+		// cout << "\t" << to_string(a) << ".: " << amls[a].name << endl;
+	}
+
+	cout << kt.str() << endl;
+
+}
+
+/*
+Print table of contiguous blocks
+*/
+void print_contiguous(vector<contiguous> contigs){
+
+	// size_t idx_prog_start;
+	// size_t idx_prog_end;
+	// string starting_AML;
+
+	KTable kt;
+	kt.table_title("Contiguous Blocks:");
+	kt.row({"Starting AML", "Start Address", "End Address"});
+
+	for (size_t a = 0 ; a < contigs.size() ; a++){
+
+		kt.row({contigs[a].starting_AML, to_string(contigs[a].idx_prog_start), to_string(contigs[a].idx_prog_end)});
+	}
+
+	cout << kt.str() << endl;
+
 }
 
 /*
