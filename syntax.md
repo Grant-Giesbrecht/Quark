@@ -35,6 +35,8 @@ Abstracted memory locations indicate locations in memory that are not explicitly
 
 * You can specify the location of an abstract memory location using the `#REQLOC` command. If the compiler cannot fit it in that location, an error will be displayed.
 
+_NOTE_: AMLs beginning with 'TRUE_IF_' are interpreted by quark as components of an expanded 'if' statement. As such, they will be recognized as acceptable locations to insert a gap between two contiguous blocks.
+
 ## Subroutines:
 
 Subroutines are a crude function analog.
