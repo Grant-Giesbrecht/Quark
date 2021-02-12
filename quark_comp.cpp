@@ -359,8 +359,13 @@ bool check_isv(vector<line>& program, CompilerParams& params);
 bool read_options(vector<line>& program, CompilerParams& params);
 bool expand_while_statements(vector<line>& program, CompilerParams& params);
 bool expand_if_statements(vector<line>& program, CompilerParams& params);
+bool expand_boolean_values(vector<line>& program, CompilerParams& params);
 bool load_blocksub_definitions(vector<line>& program, vector<blocksub>& subs, CompilerParams& params);
 bool expand_blocksub_statements(vector<line>& program, vector<blocksub>& subs, CompilerParams& params);
+
+
+
+//FINAL EXPANSIONS
 void get_all_amls(vector<line>& program, vector<aml>& amls);
 void get_contiguous_blocks(vector<line>& program, CompilerParams& params, vector<aml> amls, vector<contiguous>& contigs);
 
@@ -481,31 +486,55 @@ int main(int argc, char** argv){
 		step_failed = true;
 	}
 	params.spam("Read Option Directives");
-	if (params.verbose) print_program(program);
+	if (params.verbose){
+		cout << "Read Option Directives" << endl;
+		print_program(program);
+	}
 
 
 	if (!check_isv(program, params)){
 		step_failed = true;
+	}
+	if (params.verbose){
+		cout << "CHECKED ISV" << endl;
 	}
 
 	if (!expand_while_statements(program, params)){
 		step_failed = true;
 	}
 	params.spam("Expanded While Statements");
-	if (params.verbose) print_program(program);
+	if (params.verbose){
+		cout << "EXPANDED WHILE STATEMENTS" << endl;
+		print_program(program);
+	}
 
 
 	if (!expand_if_statements(program, params)){
 		step_failed = true;
 	}
 	params.spam("Expanded If Statements");
-	if (params.verbose) print_program(program);
+	if (params.verbose){
+		cout << "EXPANDED IF STATEMENTS" << endl;
+		print_program(program);
+	}
+
+	if (!expand_boolean_values(program, params)){
+		step_failed = true;
+	}
+	params.spam("Expanded boolean values");
+	if (params.verbose){
+		cout << "EXPANDED BOOLEAN VALUES" << endl;
+		print_program(program);
+	}
 
 
 	if (!load_blocksub_definitions(program, subs, params)){
 		step_failed = true;
 	}
 	params.spam("Loaded blocksub Defininitions");
+	if (params.verbose){
+		cout << "LOADED BLOCK SUBSTITUTIONS" << endl;
+	}
 	if (params.verbose) print_blocksubs(subs);
 	if (params.verbose) print_program(program);
 
@@ -524,7 +553,10 @@ int main(int argc, char** argv){
 		step_failed = true;
 	}
 	params.spam("Expanded blocksub Calls");
-	if (params.verbose) print_program(program, "i");
+	if (params.verbose){
+		cout << "EXPANDED BLOCKSUB CALLS" << endl;
+		print_program(program);
+	}
 
 	get_all_amls(program, amls);
 	if (params.verbose) print_amls(amls);
@@ -1005,6 +1037,31 @@ bool expand_if_statements(vector<line>& program, CompilerParams& params){
 			i = opening_index + block_contents.size();
 
 		}
+	}
+
+}
+
+bool expand_boolean_values(vector<line>& program, CompilerParams& params){
+
+	size_t num_true_exp = 0;
+	size_t num_false_exp = 0;
+
+	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
+
+		//Parse string
+
+		string line_str = program[i].str;
+		ensure_whitespace(line_str, "(),=;");
+		vector<string> words = parse(line_str, " \t");
+
+		if (gstd::inVector(string("true"), words)){
+			gstd::findAndReplace(program[i].str, "true", to_string(params.true_value));
+		}
+
+		if (gstd::inVector(string("false"), words)){
+			gstd::findAndReplace(program[i].str, "false", to_string(params.false_value));
+		}
+
 	}
 
 }
