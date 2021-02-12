@@ -58,14 +58,14 @@ typedef struct{
 }line;
 
 /*
-Describes a macro subroutine.
+Describes a macro blocksub.
 */
 typedef struct{
 	string name;
 	vector<string> arguments;
 	vector<line> contents;
 	size_t declare_line;
-}subroutine;
+}blocksub;
 
 /*
 Describes a message from the compiler. This includes the text of the message
@@ -359,20 +359,20 @@ bool check_isv(vector<line>& program, CompilerParams& params);
 bool read_options(vector<line>& program, CompilerParams& params);
 bool expand_while_statements(vector<line>& program, CompilerParams& params);
 bool expand_if_statements(vector<line>& program, CompilerParams& params);
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, CompilerParams& params);
+bool load_blocksub_definitions(vector<line>& program, vector<blocksub>& subs, CompilerParams& params);
+bool expand_blocksub_statements(vector<line>& program, vector<blocksub>& subs, CompilerParams& params);
 void get_all_amls(vector<line>& program, vector<aml>& amls);
 void get_contiguous_blocks(vector<line>& program, CompilerParams& params, vector<aml> amls, vector<contiguous>& contigs);
 
 //OTHER
 void print_program(vector<line> program, string options="");
 void rich_print_program(vector<line> program, vector<contiguous> contigs, CompilerParams& params, string options="");
-void print_subroutines(vector<subroutine> subs);
+void print_blocksubs(vector<blocksub> subs);
 void print_amls(vector<aml> amls);
 void print_contiguous(vector<contiguous> contiguous);
 bool get_block_contents(vector<line>& block_contents, line input, int& blocks_open, bool ignore_first_open=false, bool annotate=false);
 bool is_valid_name(string s);
-bool begins_with_subname(string line, vector<subroutine> subs);
+bool begins_with_subname(string line, vector<blocksub> subs);
 
 
 int main(int argc, char** argv){
@@ -436,7 +436,7 @@ int main(int argc, char** argv){
 
 	//Read file into 'program' vector. Keeps every non-blank line (incl. comments)
 	vector<line> program;
-	vector<subroutine> subs;
+	vector<blocksub> subs;
 	vector<aml> amls;
 	vector<contiguous> contigs;
 	ifstream file(filename.c_str());
@@ -502,11 +502,11 @@ int main(int argc, char** argv){
 	if (params.verbose) print_program(program);
 
 
-	if (!load_subroutine_definitions(program, subs, params)){
+	if (!load_blocksub_definitions(program, subs, params)){
 		step_failed = true;
 	}
-	params.spam("Loaded Subroutine Defininitions");
-	if (params.verbose) print_subroutines(subs);
+	params.spam("Loaded blocksub Defininitions");
+	if (params.verbose) print_blocksubs(subs);
 	if (params.verbose) print_program(program);
 
 	//The steps above this are the first few that will need to run
@@ -520,10 +520,10 @@ int main(int argc, char** argv){
 
 	//The steps below this are the last few that need to run
 
-	if (!expand_subroutine_statements(program, subs, params)){
+	if (!expand_blocksub_statements(program, subs, params)){
 		step_failed = true;
 	}
-	params.spam("Expanded Subroutine Calls");
+	params.spam("Expanded blocksub Calls");
 	if (params.verbose) print_program(program, "i");
 
 	get_all_amls(program, amls);
@@ -1010,19 +1010,19 @@ bool expand_if_statements(vector<line>& program, CompilerParams& params){
 }
 
 /*
-Reads through the program, removes all subroutine definitions, turns them into
-subroutine structs, and places them in the variable 'subs'.
+Reads through the program, removes all blocksub definitions, turns them into
+blocksub structs, and places them in the variable 'subs'.
 
 Returns true if no errors occur.
 */
-bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs, CompilerParams& params){
+bool load_blocksub_definitions(vector<line>& program, vector<blocksub>& subs, CompilerParams& params){
 
 	size_t num_def = 0;
 	for (size_t i = 0 ; i < program.size() ; i++){ //For each line...
 
-		if (program[i].str.substr(0, 11) == "#SUBROUTINE"){ //If beginning of line is #SUBROUTINE keyword
+		if (program[i].str.substr(0, 11) == "#BLOCKSUB"){ //If beginning of line is #BLOCKSUB keyword
 
-			subroutine temp_sr;
+			blocksub temp_sr;
 			temp_sr.declare_line = program[i].lnum;
 
 			//******************* ENSURE CORRECT SYNTAX ******************//
@@ -1033,15 +1033,15 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 			//Enure two words or more
 			if (words.size() < 5){
 
-				params.error("Subroutine definition requires name, parentheses, and opening curly bracket. Line: " + to_string(program[i].lnum));
+				params.error("blocksub definition requires name, parentheses, and opening curly bracket. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			//************************** GET NAME *************************//
 
-			//Ensure valid subroutine name
+			//Ensure valid blocksub name
 			if (!is_valid_name(words[1])){
-				params.error("Subroutine name '" + words[1] + "' is not a permissible name. Line: " + to_string(program[i].lnum));
+				params.error("blocksub name '" + words[1] + "' is not a permissible name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -1051,19 +1051,19 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 
 			//Ensure opening parentheses in right spot
 			if (words[2] != "("){
-				params.error("Opening parentheses must be present after subroutine name. Line: " + to_string(program[i].lnum));
+				params.error("Opening parentheses must be present after blocksub name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			//Ensure closing parentheses in right spot
 			if (words[words.size()-2] != ")"){
-				params.error("Closed parentheses must be second to last token in subroutine definition line. Line: " + to_string(program[i].lnum));
+				params.error("Closed parentheses must be second to last token in blocksub definition line. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
 			//Ensure opening bracket
 			if (words[words.size()-1] != "{"){
-				params.error("Opening curly brackets must be last token in subroutine definition line. Line: " + to_string(program[i].lnum));
+				params.error("Opening curly brackets must be last token in blocksub definition line. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -1124,7 +1124,7 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 			if (params.annotate){
 				line temp_line;
 				temp_line.lnum = opening_line;
-				temp_line.str = "//HKOMP: Subroutine definition. Name: '" + temp_sr.name + "' Arguments: " + to_string(temp_sr.arguments.size()) + " Block size: " + to_string(temp_sr.contents.size());
+				temp_line.str = "//QUARK: blocksub definition. Name: '" + temp_sr.name + "' Arguments: " + to_string(temp_sr.arguments.size()) + " Block size: " + to_string(temp_sr.contents.size());
 				program.insert(program.begin()+opening_index, temp_line);
 			}
 
@@ -1141,18 +1141,18 @@ bool load_subroutine_definitions(vector<line>& program, vector<subroutine>& subs
 }
 
 /*
-Finds subroutine calls and expands them into AHSM code.
+Finds blocksub calls and expands them into AHSM code.
 Syntax rules for while statements:
-	* The subroutine name, with a carat attacted to the front, must be the first
-	  word. (ex. ^subroutine_name)
+	* The blocksub name, with a carat attacted to the front, must be the first
+	  word. (ex. ^blocksub_name)
 	* The arguments must follow in parenthesis. If no arguments are taken, empty
 	  parentheses must be given. The arguments are separated by commas.
 	* Whatever is provided as each argument is drop-in replaced for the argument
-	  in the subroutine's text.
+	  in the blocksub's text.
 
 Returns true if no errors occur.
 */
-bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& subs, CompilerParams& params){
+bool expand_blocksub_statements(vector<line>& program, vector<blocksub>& subs, CompilerParams& params){
 	cout << "\n\n" << endl;
 	size_t num_del = 0;
 	size_t num_inline = 0;
@@ -1165,7 +1165,7 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 			ensure_whitespace(callline, "(,)");
 			vector<string> words = parse(callline, " \t");
 
-			//******************* FIND SUBROUTINE IDX *******************//
+			//******************* FIND blocksub IDX *******************//
 
 			//Check if first word is in subs vector
 			string sub_name = words[0].substr(1);
@@ -1182,7 +1182,7 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 
 			//Enure 3 words or more, and that second word is open paren, last is close paren
 			if (words.size() < 3 || words[1] != "(" || words[words.size()-1] != ")"){
-				params.error("Incorrect syntax in subroutine cal. Parentheses are required after subroutine name. Line: " + to_string(program[i].lnum));
+				params.error("Incorrect syntax in blocksub cal. Parentheses are required after blocksub name. Line: " + to_string(program[i].lnum));
 				return false;
 			}
 
@@ -1199,11 +1199,11 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 						need_comma = false;
 						continue;
 					}else{ //If comma not okay, send error
-						params.error("Incorrect syntax in subroutine call. Extraneous comma found within argument list", program[i].lnum);
+						params.error("Incorrect syntax in blocksub call. Extraneous comma found within argument list", program[i].lnum);
 						return false;
 					}
 				}else if(need_comma){ //Check if comma was needed but missing
-					params.error("Incorrect syntax in subroutine call. Missing comma within argument list.", program[i].lnum);
+					params.error("Incorrect syntax in blocksub call. Missing comma within argument list.", program[i].lnum);
 					return false;
 				}
 
@@ -1214,16 +1214,16 @@ bool expand_subroutine_statements(vector<line>& program, vector<subroutine>& sub
 
 			//Check that correct number of arguments present
 			if (args.size() != subs[sub_idx].arguments.size()){
-				params.error("Incorrect number of arguments in call to subroutine '" + subs[sub_idx].name + "'. Expected " + to_string(subs[sub_idx].arguments.size()) + " but found " + to_string(args.size()) + ".", program[i].lnum);
+				params.error("Incorrect number of arguments in call to blocksub '" + subs[sub_idx].name + "'. Expected " + to_string(subs[sub_idx].arguments.size()) + " but found " + to_string(args.size()) + ".", program[i].lnum);
 				return false;
 			}
 
-			//******************** ASSEMBLE EXPANDED SUBROUTINE **************//
+			//******************** ASSEMBLE EXPANDED blocksub **************//
 
 			vector<line> fill;
 			line new_line;
 
-			//for each line in subroutine block...
+			//for each line in blocksub block...
 			for (size_t l = 0 ; l < subs[sub_idx].contents.size() ; l++){
 
 				new_line.str = subs[sub_idx].contents[l].str;
@@ -1398,15 +1398,15 @@ void rich_print_program(vector<line> program, vector<contiguous> contigs, Compil
 }
 
 /*
-Prints the list of subroutines.
+Prints the list of blocksubs.
 */
-void print_subroutines(vector<subroutine> subs){
+void print_blocksubs(vector<blocksub> subs){
 
 	string start_str;
 
 	for (size_t i = 0 ; i < subs.size() ; i++){
 
-		cout << "SUBROUTINE: '" << subs[i].name << "' (Decl: " << to_string(subs[i].declare_line) << ")" << endl;
+		cout << "blocksub: '" << subs[i].name << "' (Decl: " << to_string(subs[i].declare_line) << ")" << endl;
 		cout << "    ARGUMENTS: ";
 		for (size_t j = 0 ; j < subs[i].arguments.size() ; j++){
 			cout << subs[i].arguments[j];
@@ -1567,15 +1567,15 @@ bool is_valid_name(string s){
 }
 
 /*
-Checks if a line begins with the name of a subroutine. This function is only
-used by the expand subroutine function but helps keep the code readable. The
-subroutine name will have a caret appended to it to match the language's syntax.
+Checks if a line begins with the name of a blocksub. This function is only
+used by the expand blocksub function but helps keep the code readable. The
+blocksub name will have a caret appended to it to match the language's syntax.
 
-Accepts 'line' to check, and 'subs' as a the list of subroutines.
+Accepts 'line' to check, and 'subs' as a the list of blocksubs.
 
-Returns true if the first word in the line is a valid subroutine callsign.
+Returns true if the first word in the line is a valid blocksub callsign.
 */
-bool begins_with_subname(string line, vector<subroutine> subs){
+bool begins_with_subname(string line, vector<blocksub> subs){
 
 	//Remove arguments/parentheses
 	ensure_whitespace(line, "(,)");

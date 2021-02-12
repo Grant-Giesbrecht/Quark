@@ -37,13 +37,13 @@ Abstracted memory locations indicate locations in memory that are not explicitly
 
 _NOTE_: AMLs beginning with 'TRUE_IF_' are interpreted by quark as components of an expanded 'if' statement. As such, they will be recognized as acceptable locations to insert a gap between two contiguous blocks.
 
-## Subroutines:
+## Block Substitutions:
 
-Subroutines are a crude function analog.
+Block Substitutions (Blocksubs) are a poor-man's subroutine. They're find and replace style code blocks.
 
-### Subroutine Definition:
+### Blocksub Definition:
 
-* A subroutine is defined by starting a line with `#SUBROUTINE`. It must be followed by the function name, then opening and closing parentheses. Anything within the parentheses will be interpreted as subroutine arguments, with commas separating arguments. An opening block character `{` must be on the same line.
+* A blocksub is defined by starting a line with `#BLOCKSUB`. It must be followed by the function name, then opening and closing parentheses. Anything within the parentheses will be interpreted as blocksub arguments, with commas separating arguments. An opening block character `{` must be on the same line.
 
 ### Interrupt Service Routine (ISR) Declarations:
 
@@ -52,9 +52,9 @@ An ISR is a specific type of subroutine which is triggered by an interrupt.
 * It needs to have a return (`RTN`) command as the last statement.
 * It most likely needs an explicitly defined starting location. This can be achieved by giving it an abstract memory location (using `#HERE @<location_name>`), then requesting the AML be given a specific address using `#REQLOC`.
 
-### Subroutine Calls:
+### Blocksub Calls:
 
-* Subroutines are called by writing the name preceeded by a carat `^`. The arguments must be in parentheses.
+* Blocksubs are called by writing the name preceeded by a carat `^`. The arguments must be in parentheses.
 
 ## Acceptable Names for Variables, Subroutines:
 
@@ -74,11 +74,11 @@ Example: `#OPTION FALSE_VALUE 14`
 
 * `=`: Assigns the numeric value on the RHS to the specified value (LHS must be a memory location, including abstract memory locations).
 * `{}`: Open an closing brackets of a code block.
-* `^`: Indicates the word is a subroutine call.
+* `^`: Indicates the word is a blocksub call.
 * `@`: Indicates the word is an abstract memory location.
 * `#HERE`: Followed by abstract memory location, says next command is located on line given by specified abstract memory location.
  * `#HERE @aml_name;ADD` Makes AML 'aml_name' refer to line of instruction `ADD`.
-* `#SUBROUTINE`: Declares a subroutine
+* `#BLOCKSUB`: Declares a block-substitution
 * `#ISR`: Declares a subroutine with ISR requirements.
 * `#OPTION`: Compiler option directive. Followed by option name and value.
 

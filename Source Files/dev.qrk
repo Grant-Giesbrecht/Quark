@@ -25,6 +25,8 @@ IFZERO{
 	RAM_DISPA 0x14
 }
 
+^mult(1, 4)
+
 #SUBROUTINE mult(a, b){
 	RAM_REGA
 	RAM_REGB
@@ -37,4 +39,9 @@ IFZERO{
 	RAM_REGB
 	DIV
 	REGC_RAM
+}
+
+#ISR timer_isr{
+	FCP_ADD;
+	RTN;
 }
