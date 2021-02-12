@@ -2,6 +2,10 @@
 
 // This is a comment
 
+#OPTION TRUE_VALUE = 3
+
+@x = true;
+@y = false;
 ADD
 SUB
 
@@ -27,14 +31,14 @@ IFZERO{
 
 ^mult(1, 4)
 
-#SUBROUTINE mult(a, b){
+#BLOCKSUB mult(a, b){
 	RAM_REGA
 	RAM_REGB
 	MULT
 	REGC_RAM
 }
 
-#SUBROUTINE div(a, b){
+#BLOCKSUB div(a, b){
 	RAM_REGA
 	RAM_REGB
 	DIV
