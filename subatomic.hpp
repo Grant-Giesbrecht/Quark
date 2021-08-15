@@ -507,7 +507,7 @@ void print_controls(vector<control_line> controls){
 /*
 Prints a map of strings to operations.
 */
-void print_operations(map<string, operation> ops, size_t pin_cols = 4){
+void print_operations_full(map<string, operation> ops, size_t pin_cols = 4){
 
 	map<string, operation>::iterator it;
 	map<int, map<int, map<int, bool> > >::iterator phase_it;
@@ -552,5 +552,79 @@ void print_operations(map<string, operation> ops, size_t pin_cols = 4){
 		}
 
 	}
+
+}
+
+/*
+Prints a map of strings to operations.
+*/
+void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4){
+
+	map<string, operation>::iterator it;
+	map<int, map<int, map<int, bool> > >::iterator phase_it;
+	map<int, map<int, bool> >::iterator word_it;
+	map<int, bool>::iterator pin_it;
+
+	KTable kt;
+
+	kt.table_title("ISD Operation Summary");
+	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes"});
+
+	std::vector<std::string> trow;
+
+	//For each operation
+	for ( it = ops.begin(); it != ops.end(); it++){
+
+		trow.clear();
+		trow.push_back(it->second.name);
+		trow.push_back(""); //Phases
+		trow.push_back(to_string(it->second.instruction_no));
+		trow.push_back(to_string(it->second.data_bits));
+
+		// //Print title
+		// cout << "******************** " << it->first << " **********************" << endl;
+		//
+		// //For each phase
+		// for (phase_it = it->second.ctrls.begin() ; phase_it != it->second.ctrls.end() ; phase_it++){
+		//
+		// 	cout << "\tPhase " << to_string(phase_it->first) << ": " <<endl;
+		//
+		// 	//For each word
+		// 	for (word_it = phase_it->second.begin() ; word_it != phase_it->second.end() ; word_it++){
+		// 		cout << "\t\tWord " << to_string(word_it->first) << ": " << endl;
+		//
+		// 		size_t count = 0;
+		// 		cout << "\t\t\t";
+		// 		for (pin_it = word_it->second.begin() ; pin_it != word_it->second.end() ; pin_it++){
+		//
+		// 			//Start newline ever 'x' columns
+		//
+		// 			if (count%pin_cols == 0 && count != 1){
+		// 				cout << endl;
+		// 				cout << "\t\t\t";
+		// 			}
+		// 			count++;
+		//
+		// 			//Print pin data
+		// 			cout << "[" << pin_it->first << "]:" << bool_to_str(pin_it->second) << "\t";
+		// 		}
+		// 		cout << endl;
+		//
+		// 	}
+		//
+		//
+		// }
+
+		kt.row(trow);
+
+	}
+
+	cout << kt.str() << endl;
+
+}
+
+void isv_explorer(map<string, operation> ops, vector<control_line> controls){
+
+
 
 }

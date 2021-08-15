@@ -210,6 +210,7 @@ int main(int argc, char** argv){
 	}
 
 	if (!read_CW(cw_filename, controls)){
+		cout << "Exiting" << endl;
 		return -1;
 	}
 
@@ -222,19 +223,19 @@ int main(int argc, char** argv){
 		cout << "Reading (ISD): " << argv[1] << endl;
 	}
 
-	print_operations(ops);
+	print_operation_summary(ops);
 
 	std::vector<string> lut = generate_bcm(ops, controls);
 
 	cout << endl;
-	print_bcm(lut);
+	// print_bcm(lut);
 
 	string lut_out = "./ISVs/memorydelta.lut";
-	if (save_bcm(lut_out, lut)){
-		cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
-	}else{
-		cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
-	}
+	// if (save_bcm(lut_out, lut)){
+	// 	cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
+	// }else{
+	// 	cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
+	// }
 
 	return 0;
 }
