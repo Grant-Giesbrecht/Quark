@@ -7,7 +7,7 @@ also defines default states and whether they are logic high or low.
 
 ## Syntax
 
-Note: <> indicates the text inside is replaced with the value, and () indicates an optional arugment.
+Note: <> indicates the text inside is replaced with the value, and () indicates an optional argument.
  * Default state represented using `OFF` or `ON`.
  * Optional `!` after default state indicates that control line uses negative logic
  * Anything after `//` interpreted as a _comment_.

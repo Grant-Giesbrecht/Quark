@@ -368,6 +368,16 @@ Reads an operation file (.OPF) and returns a map of operations.
 					nextOp.flag = FLAG_X;
 				}
 
+			}else if (words[0] == "#PRGM"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words" << endl;
+					return false;
+				}
+
+				nextOp.prgm_replac = words[1];
+
+
 			}else if (words[0] == "?"){
 
 				//Add new line if previous lines exist
@@ -593,7 +603,7 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, si
 	KTable kt;
 
 	kt.table_title("ISD Operation Summary");
-	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Description"});
+	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Description", "Prgm Inst. Mapping"});
 
 	std::vector<std::string> trow;
 	std::string desc_str;
@@ -612,8 +622,11 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, si
 		if (desc_str.length() > desc_len){
 			desc_str = desc_str.substr(0, desc_len-3) + "...";
 		}
-
 		trow.push_back(desc_str);
+		
+		trow.push_back(it->second.prgm_replac);
+
+
 
 		kt.row(trow);
 
