@@ -4,6 +4,10 @@
 
 * Everything after `//` is a comment and is ignored by the compiler. This works both for comment lines and inline comments.
 
+## Booleans
+
+'true' and 'false' map to numeric values assigned by the compiler. THis is for more readable boolean code.
+
 ## Directives
 
 
@@ -81,6 +85,8 @@ Example: `#OPTION FALSE_VALUE 14`
 * `#BLOCKSUB`: Declares a block-substitution
 * `#ISR`: Declares a subroutine with ISR requirements.
 * `#OPTION`: Compiler option directive. Followed by option name and value.
+* `true`: Maps to compiler's numeric true value
+* `false`: Maps to compiler's numeric false value
 
 ## ISV
 

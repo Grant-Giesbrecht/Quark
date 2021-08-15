@@ -3,6 +3,7 @@
 // This is a comment
 
 #OPTION TRUE_VALUE = 3
+#ENCODING = "./Source Files/memorydelta.chars" //NOTE: Add this functionality 
 
 @x = true;
 @y = false;
