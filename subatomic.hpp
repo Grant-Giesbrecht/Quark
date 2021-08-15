@@ -5,6 +5,7 @@
 #include <fstream>
 // #include <IEGA/string_manip.hpp>
 #include "gstd.hpp"
+#include <ktable.hpp>
 #include <sstream>
 #include <bitset>
 #include <map>
@@ -164,11 +165,13 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 	//read through file
 	ifstream file(readfile.c_str());
 	if (file.is_open()) {
+
 		string line;
 
 		control_line nextCtrl;
 
 		while (getline(file, line)) {
+
 			line_num++;
 
 			trim_whitespace(line); //Remove whitespace from line
@@ -452,7 +455,7 @@ Reads an operation file (.OPF) and returns a map of operations.
 /*
 Prints a vector of controL-line  structs.
 */
-void print_controls(vector<control_line> controls){
+void print_controls_old(vector<control_line> controls){
 
 	for (size_t i = 0 ; i < controls.size() ; i++){
 		cout << "************** " << controls[i].name << " *************" << endl;
@@ -462,6 +465,36 @@ void print_controls(vector<control_line> controls){
 		cout << "\tDefault to on: " << bool_to_str(controls[i].default_to_on) << endl;
 		cout << endl;
 	}
+}
+
+void print_controls(vector<control_line> controls){
+
+	KTable kt;
+
+	kt.table_title("Control Wiring Summary");
+	kt.row({"Ctrl Line Name", "Ctrl Word", "Pin", "Active Low", "Default State"});
+
+	std::vector<std::string> trow;
+	for (size_t i = 0 ; i < controls.size() ; i++){
+
+		trow.clear();
+
+		trow.push_back(controls[i].name);
+		trow.push_back(to_string(controls[i].word));
+		trow.push_back(to_string(controls[i].pin));
+		trow.push_back(bool_to_str(controls[i].active_low));
+		if (controls[i].default_to_on){
+			trow.push_back("ON");
+		}else{
+			trow.push_back("OFF");
+		}
+
+
+		kt.row(trow);
+	}
+
+	cout << kt.str() << endl;
+
 }
 
 /*

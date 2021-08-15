@@ -7,6 +7,8 @@ Created by G. Giesbrecht
 14-8-2021
 */
 
+//CXCOMPILE make isvgen
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -199,11 +201,16 @@ int main(int argc, char** argv){
 	std::vector<control_line> controls;
 	map<string, operation> ops;
 
+	std::string cw_filename;
 	if (argc < 3){
-		read_CW("./Source Files/memorydelta.cw", controls);
+		cw_filename = "./Source Files/memorydelta.cw";
 	}else{
-		read_CW(argv[1], controls);
+		cw_filename = string(argv[1]);
 		cout << "Reading (CW): " << argv[2] << endl;
+	}
+
+	if (!read_CW(cw_filename, controls)){
+		return -1;
 	}
 
 	print_controls(controls);
