@@ -41,6 +41,14 @@ typedef struct{
 	bool default_to_on;
 }control_line;
 
+typedef struct{
+	string arch;
+	string series;
+	int major;
+	int minor;
+	int patch;
+}isv_data;
+
 void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
     // Get the first occurrence
     size_t pos = data.find(toSearch);
@@ -274,11 +282,14 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 /*
 Reads an operation file (.OPF) and returns a map of operations.
 */
- bool read_ISD(string readfile, std::vector<control_line> controls, map<std::string, operation>& output){
+ bool read_ISD(string readfile, std::vector<control_line> controls, map<std::string, operation>& output, isv_data& isv){
 
 	output.clear();
 
 	map<std::string, operation> ops;
+
+	bool found_arch = false;
+	bool found_series = false;
 
 	vector<string> words;
 
@@ -367,6 +378,24 @@ Reads an operation file (.OPF) and returns a map of operations.
 				// }else{
 				// 	nextOp.flag = FLAG_X;
 				// }
+
+			}else if (words[0] == "#ARCH"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words" << endl;
+					return false;
+				}
+
+				isv.arch = words[1];
+
+			}else if (words[0] == "#SERIES"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words" << endl;
+					return false;
+				}
+
+				isv.series = words[1];
 
 			}else if (words[0] == "#PRGM"){
 
@@ -490,6 +519,11 @@ Reads an operation file (.OPF) and returns a map of operations.
 
 	//Save data to output variable
 	output = ops;
+
+	if (!found_arch || !found_series){
+		cout << "ERROR: Missing architecture or series statement." << endl;
+		return false;
+	}
 
 	return true;
 }

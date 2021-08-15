@@ -324,6 +324,7 @@ int main(int argc, char** argv){
 
 	std::vector<control_line> controls;
 	map<string, operation> ops;
+	isv_data isv;
 
 	std::string cw_filename;
 	if (argc < 3){
@@ -341,9 +342,9 @@ int main(int argc, char** argv){
 	print_controls(controls);
 
 	if (argc < 2){
-		read_ISD("./Source Files/syntax_demo.isd", controls, ops);
+		read_ISD("./Source Files/syntax_demo.isd", controls, ops, isv);
 	}else{
-		read_ISD(argv[1], controls, ops);
+		read_ISD(argv[1], controls, ops, isv);
 		cout << "Reading (ISD): " << argv[1] << endl;
 	}
 
@@ -360,6 +361,9 @@ int main(int argc, char** argv){
 	}else{
 		cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
 	}
+
+	cout << "\nTarget Architecture: " << isv.arch << endl;
+	cout << "\nISV Series: " << isv.series << endl;
 
 	return 0;
 }
