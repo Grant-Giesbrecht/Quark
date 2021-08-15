@@ -203,7 +203,7 @@ int main(int argc, char** argv){
 
 	std::string cw_filename;
 	if (argc < 3){
-		cw_filename = "./Source Files/memorydelta.cw";
+		cw_filename = "./Source Files/syntax_demo.cw";
 	}else{
 		cw_filename = string(argv[1]);
 		cout << "Reading (CW): " << argv[2] << endl;
@@ -216,7 +216,7 @@ int main(int argc, char** argv){
 	print_controls(controls);
 
 	if (argc < 2){
-		read_ISD("./Source Files/memorydelta.isd", controls, ops);
+		read_ISD("./Source Files/syntax_demo.isd", controls, ops);
 	}else{
 		read_ISD(argv[1], controls, ops);
 		cout << "Reading (ISD): " << argv[1] << endl;

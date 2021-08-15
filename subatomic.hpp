@@ -152,6 +152,13 @@ bool get_word_pin(std::string ctrl_line, std::vector<control_line> controls, int
 
 }
 
+/*
+Reads a .cw (control wiring) file. This file describes how control lines are
+physically addressed in the CPU, and thus allows them to be assigned addresses in
+the LUT.
+
+For syntax on the .cw file format, see "CW File Syntax.md".
+*/
 bool read_CW(string readfile, std::vector<control_line>& controls){
 
 	controls.clear();
