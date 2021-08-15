@@ -29,6 +29,8 @@ typedef struct{
 	int data_bits;
 	char flag;
 	map <int, map<int, map<int, bool> > > ctrls;
+	string desc;
+	string prgm_replac;
 }operation;
 
 typedef struct{
@@ -39,6 +41,18 @@ typedef struct{
 	bool default_to_on;
 }control_line;
 
+void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
+    // Get the first occurrence
+    size_t pos = data.find(toSearch);
+    // Repeat till end is reached
+    while( pos != std::string::npos){
+        // Replace this occurrence of Sub String
+        data.replace(pos, toSearch.size(), replaceStr);
+        // Get the next occurrence from the current position
+        pos =data.find(toSearch, pos + replaceStr.size());
+    }
+}
+
 /*
 Clears the operation's data fields
 */
@@ -47,6 +61,8 @@ void clear_operation(operation& x){
 	x.instruction_no = -1;
 	x.data_bits = -1;
 	x.ctrls.clear();
+	x.desc = "";
+	x.prgm_replac = "";
 }
 
 /*
@@ -299,7 +315,7 @@ Reads an operation file (.OPF) and returns a map of operations.
 			if (skip_line) continue;
 
 			//Parse words
-			gstd::ensure_whitespace(line, "*=@:");
+			gstd::ensure_whitespace(line, "*=@?:");
 			words = gstd::parse(line, " \t");
 
 			//Ensure words exist
@@ -352,6 +368,15 @@ Reads an operation file (.OPF) and returns a map of operations.
 					nextOp.flag = FLAG_X;
 				}
 
+			}else if (words[0] == "?"){
+
+				//Add new line if previous lines exist
+				if (nextOp.desc.length() > 0){
+					nextOp.desc = nextOp.desc + "\n";
+				}
+
+				std::size_t found = line.find("?");
+				nextOp.desc = nextOp.desc + line.substr(found+1);
 
 			}else{
 
@@ -558,7 +583,7 @@ void print_operations_full(map<string, operation> ops, size_t pin_cols = 4){
 /*
 Prints a map of strings to operations.
 */
-void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4){
+void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, size_t desc_len = 25){
 
 	map<string, operation>::iterator it;
 	map<int, map<int, map<int, bool> > >::iterator phase_it;
@@ -568,9 +593,10 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4){
 	KTable kt;
 
 	kt.table_title("ISD Operation Summary");
-	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes"});
+	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Description"});
 
 	std::vector<std::string> trow;
+	std::string desc_str;
 
 	//For each operation
 	for ( it = ops.begin(); it != ops.end(); it++){
@@ -581,39 +607,13 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4){
 		trow.push_back(to_string(it->second.instruction_no));
 		trow.push_back(to_string(it->second.data_bits));
 
-		// //Print title
-		// cout << "******************** " << it->first << " **********************" << endl;
-		//
-		// //For each phase
-		// for (phase_it = it->second.ctrls.begin() ; phase_it != it->second.ctrls.end() ; phase_it++){
-		//
-		// 	cout << "\tPhase " << to_string(phase_it->first) << ": " <<endl;
-		//
-		// 	//For each word
-		// 	for (word_it = phase_it->second.begin() ; word_it != phase_it->second.end() ; word_it++){
-		// 		cout << "\t\tWord " << to_string(word_it->first) << ": " << endl;
-		//
-		// 		size_t count = 0;
-		// 		cout << "\t\t\t";
-		// 		for (pin_it = word_it->second.begin() ; pin_it != word_it->second.end() ; pin_it++){
-		//
-		// 			//Start newline ever 'x' columns
-		//
-		// 			if (count%pin_cols == 0 && count != 1){
-		// 				cout << endl;
-		// 				cout << "\t\t\t";
-		// 			}
-		// 			count++;
-		//
-		// 			//Print pin data
-		// 			cout << "[" << pin_it->first << "]:" << bool_to_str(pin_it->second) << "\t";
-		// 		}
-		// 		cout << endl;
-		//
-		// 	}
-		//
-		//
-		// }
+		desc_str = it->second.desc;
+		findAndReplaceAll(desc_str, "\n", "\\\\ ");
+		if (desc_str.length() > desc_len){
+			desc_str = desc_str.substr(0, desc_len-3) + "...";
+		}
+
+		trow.push_back(desc_str);
 
 		kt.row(trow);
 

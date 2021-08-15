@@ -225,7 +225,7 @@ int main(int argc, char** argv){
 
 	print_operation_summary(ops);
 
-	std::vector<string> lut = generate_bcm(ops, controls);
+	// std::vector<string> lut = generate_bcm(ops, controls);
 
 	cout << endl;
 	// print_bcm(lut);
