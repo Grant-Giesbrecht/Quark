@@ -33,9 +33,15 @@ Note: <> indicates the text inside is replaced with the value, and () indicates 
 
  `<phase>: <control_line> (= <ON/OFF>) (<repeat with as many control lines as req'd)`
 
+ 5. _ISV Series:_ Word after `#SERIES` specifies the ISV series.
+
+ 6. _Target Architecture:_ Word after `#ARCH` specifies the target architecture.
 
 **Full Example:**
- 
+
+	#SERIES Alpha
+	#ARCH Z3
+
 	* JUMP_TRUE 17 2
 	? When a program conditional jump evaluates to true, this is called.
 	?
