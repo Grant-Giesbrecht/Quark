@@ -19,16 +19,16 @@
 using namespace gstd;
 using namespace std;
 
-#define FLAG_X 'X'
-#define FLAG_SET 'S'
-#define FLAG_CLR 'C'
+// #define FLAG_X 'X'
+// #define FLAG_SET 'S'
+// #define FLAG_CLR 'C'
 
 typedef struct{
 	string name;
 	int instruction_no;
 	int data_bits;
-	char flag;
-	map <int, map<int, map<int, bool> > > ctrls;
+	// char flag;
+	map <int, map<int, map<int, bool> > > ctrls; //Phase-Word-Pin (Data)
 	string desc;
 	string prgm_replac;
 }operation;
@@ -355,18 +355,18 @@ Reads an operation file (.OPF) and returns a map of operations.
 					return false;
 				}
 
-				//Set flag state
-				if (words.size() == 5){
-					if (words[4] == "^0"){
-						nextOp.flag = FLAG_CLR;
-					}else if(words[4] == "^1"){
-						nextOp.flag = FLAG_SET;
-					}else{
-						COUT_ERROR << "Invlaid token '" << words[4] << "' for flag specifier (^0/^1)." << endl;
-					}
-				}else{
-					nextOp.flag = FLAG_X;
-				}
+				// //Set flag state
+				// if (words.size() == 5){
+				// 	if (words[4] == "^0"){
+				// 		nextOp.flag = FLAG_CLR;
+				// 	}else if(words[4] == "^1"){
+				// 		nextOp.flag = FLAG_SET;
+				// 	}else{
+				// 		COUT_ERROR << "Invlaid token '" << words[4] << "' for flag specifier (^0/^1)." << endl;
+				// 	}
+				// }else{
+				// 	nextOp.flag = FLAG_X;
+				// }
 
 			}else if (words[0] == "#PRGM"){
 
@@ -623,7 +623,7 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, si
 			desc_str = desc_str.substr(0, desc_len-3) + "...";
 		}
 		trow.push_back(desc_str);
-		
+
 		trow.push_back(it->second.prgm_replac);
 
 
