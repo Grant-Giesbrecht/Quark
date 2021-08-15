@@ -320,11 +320,22 @@ bool save_lut(string filename, vector<string> bcm){
 
 }
 
+void print_contents(vector<fline> fl){
+
+	for (size_t i = 0 ; i < fl.size() ; i++){
+
+		cout << "[" << fl[i].lnum << "]: " << fl[i].str << endl;
+
+	}
+
+}
+
 int main(int argc, char** argv){
 
 	std::vector<control_line> controls;
 	map<string, operation> ops;
 	isv_data isv;
+	isd_internal isdi;
 
 	std::string cw_filename;
 	if (argc < 3){
@@ -341,26 +352,36 @@ int main(int argc, char** argv){
 
 	print_controls(controls);
 
+	std::string isd_filename;
 	if (argc < 2){
-		read_ISD("./Source Files/syntax_demo.isd", controls, ops, isv);
+		isd_filename = "./Source Files/syntax_demo.isd";
 	}else{
-		read_ISD(argv[1], controls, ops, isv);
-		cout << "Reading (ISD): " << argv[1] << endl;
+		isd_filename = argv[1];
 	}
 
+	cout << "Reading (ISD): " << isd_filename << endl;
+	if (!read_ISD(isd_filename, controls, ops, isv, isdi)){
+		cout << "Exiting" << endl;
+		return -1;
+	}
+
+	print_contents(isdi.contents);
+
 	print_operation_summary(ops);
+
+
 
 	std::vector<string> lut = generate_LUT(ops, controls);
 
 	cout << endl;
-	print_lut(lut);
+	// print_lut(lut);
 
 	string lut_out = "./ISVs/memorydelta.lut";
-	if (save_lut(lut_out, lut)){
-		cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
-	}else{
-		cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
-	}
+	// if (save_lut(lut_out, lut)){
+	// 	cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
+	// }else{
+	// 	cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
+	// }
 
 	cout << "\nTarget Architecture: " << isv.arch << endl;
 	cout << "\nISV Series: " << isv.series << endl;

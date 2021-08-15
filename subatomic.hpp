@@ -49,6 +49,16 @@ typedef struct{
 	int patch;
 }isv_data;
 
+typedef struct{
+	size_t lnum;
+	std::string str;
+}fline;
+
+typedef struct{
+	std::vector<fline> contents;
+	map<std::string, std::vector<fline> > repl;
+}isd_internal;
+
 void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
     // Get the first occurrence
     size_t pos = data.find(toSearch);
@@ -281,15 +291,26 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 
 /*
 Reads an operation file (.OPF) and returns a map of operations.
+
+readfile - filename to read
+controls - To check that control lines exist. Also (I think) fills the remaining phases with 'defaults'. TODO: Remove the mandate for filling all phases.
+output - Populates 'output' with the operation definition data in the file
+isv - Populates 'isv' with the ISV data in the file
+isdi - Populates with the file contents, and the replacement blocks. ONly useful for debugging
+
 */
- bool read_ISD(string readfile, std::vector<control_line> controls, map<std::string, operation>& output, isv_data& isv){
+ bool read_ISD(string readfile, std::vector<control_line> controls, map<std::string, operation>& output, isv_data& isv, isd_internal& isdi){
 
 	output.clear();
 
 	map<std::string, operation> ops;
 
+	map<std::string, std::vector<fline> > replacements;
+
 	bool found_arch = false;
 	bool found_series = false;
+
+	std::vector<fline> contents;
 
 	vector<string> words;
 
@@ -302,8 +323,85 @@ Reads an operation file (.OPF) and returns a map of operations.
 
 		operation nextOp;
 
+		// Read through file, save to 'contents' (after replaceing REPL block)
 		while (getline(file, line)) {
+
 			line_num++;
+
+			gstd::ensure_whitespace(line, "*=@?:");
+			words = gstd::parse(line, " \t");
+
+			//Ensure words exist
+			if (words.size() < 1){
+				continue;
+			}
+
+			//Look for definitions or replacements
+			if (words[0] == "#DEF"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words in '#DEF' block." << endl;
+					return false;
+				}
+
+				std::string rep_name = words[1];
+
+				std::vector<fline> newrep;
+
+				while (getline(file, line)) {
+
+					line_num++;
+
+					gstd::ensure_whitespace(line, "*=@?:");
+					words = gstd::parse(line, " \t");
+
+					//Ensure words exist
+					if (words.size() < 1){
+						continue;
+					}
+
+					// Check if this is end of definition...
+					if (words[0] == "#END"){ //If so, save to replacement list
+ 						replacements[rep_name] = newrep;
+						break;
+					}else{ // Otherwise save line to new replacement being built
+						fline fn;
+						fn.lnum = line_num;
+						fn.str = line;
+						newrep.push_back(fn);
+					}
+				}
+
+			}else if(words[0] == "#REPL"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words in '#REPL' statement." << endl;
+					return false;
+				}
+
+
+				if (replacements.find(words[1]) == replacements.end()){
+					COUT_ERROR << "#REPL call accessed an undefined block '" << words[1] << "'." << endl;
+					return false;
+				}
+
+				contents.insert(std::end(contents), std::begin(replacements[words[1]]), std::end(replacements[words[1]]));
+
+			}else{
+
+				fline fn;
+				fn.lnum = line_num;
+				fn.str = line;
+				contents.push_back(fn);
+
+			}
+
+		}
+
+		for (size_t cidx = 0 ; cidx < contents.size() ; cidx++){
+
+			line = contents[cidx].str;
+			line_num = contents[cidx].lnum;
 
 			trim_whitespace(line); //Remove whitespace from line
 
@@ -378,6 +476,20 @@ Reads an operation file (.OPF) and returns a map of operations.
 				// }else{
 				// 	nextOp.flag = FLAG_X;
 				// }
+			}else if (words[0] == "#END"){
+
+				COUT_ERROR << "Extraneous '#END' slipped through!" << endl;
+				return false;
+
+			}else if (words[0] == "#REPL"){
+
+				COUT_ERROR << "Extraneous '#REPL' slipped through!" << endl;
+				return false;
+
+			}else if (words[0] == "#DEF"){
+
+				COUT_ERROR << "Extraneous '#DEF' slipped through!" << endl;
+				return false;
 
 			}else if (words[0] == "#ARCH"){
 
@@ -388,6 +500,8 @@ Reads an operation file (.OPF) and returns a map of operations.
 
 				isv.arch = words[1];
 
+				found_arch = true;
+
 			}else if (words[0] == "#SERIES"){
 
 				if (words.size() < 2){
@@ -396,6 +510,8 @@ Reads an operation file (.OPF) and returns a map of operations.
 				}
 
 				isv.series = words[1];
+
+				found_series = true;
 
 			}else if (words[0] == "#PRGM"){
 
@@ -524,6 +640,10 @@ Reads an operation file (.OPF) and returns a map of operations.
 		cout << "ERROR: Missing architecture or series statement." << endl;
 		return false;
 	}
+
+	//Populate 'isdi'
+	isdi.contents = contents;
+	isdi.repl = replacements;
 
 	return true;
 }
