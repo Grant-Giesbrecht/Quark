@@ -1,19 +1,40 @@
 #ARCH Matterhorn821
 #SERIES PT
 
+// Fetches the instruction. Should appear as the first two phases of every
+// instruction.
+//
 #DEF FETCH_
 0: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 1: CU_PMEM_OE INST_REG_WR PC_CLK
 #END
 
+// Fetches two byes of data behind the instruction and places them in the
+// address assembly registers (ie. AA0 and AA8). Used for accessing an address
+// stored with the instruction.
+#DEF GET_16b_ADDR_
+2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+3: CU_PMEM_OE REG_AA0_WR PC_CLK
+4: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+5: CU_PMEM_OE REG_AA8_WR PC_CLK
+#END
+
+// Fetches one byte of data behind the instruction and places it in
+#DEF GET_8b_DATA_ (1)
+2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+3: CU_PMEM_OE PC_CLK @1
+#END
+
 * ADD 1 0
+? Adds the numbers in REGA and REGB and stores the result in REGC
 #PROCESSOR ALU
 #REPL FETCH_
 2: _ADD_EN REGC_WR PHI_RESET
 
-* PMEM_REGA 2 2
+* PMEM_REGA 2 1
+? Transfers
 #REPL FETCH_
-2:
+#REPL GET_16b_ADDR_ REGA_WR
 3:
 4:
 5:

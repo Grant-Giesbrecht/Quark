@@ -55,8 +55,13 @@ typedef struct{
 }fline;
 
 typedef struct{
+	std::vector<fline> blk_content;
+	size_t num_arg_expect;
+}isd_repl_block;
+
+typedef struct{
 	std::vector<fline> contents;
-	map<std::string, std::vector<fline> > repl;
+	map<std::string, isd_repl_block> repl;
 }isd_internal;
 
 void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
@@ -306,7 +311,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 	map<std::string, operation> ops;
 
-	map<std::string, std::vector<fline> > replacements;
+	map<std::string, isd_repl_block > replacements;
 
 	bool found_arch = false;
 	bool found_series = false;
@@ -329,7 +334,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 			line_num++;
 
-			gstd::ensure_whitespace(line, "*=@?:");
+			gstd::ensure_whitespace(line, "*=@?:()");
 			words = gstd::parse(line, " \t");
 
 			//Ensure words exist
@@ -340,14 +345,21 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 			//Look for definitions or replacements
 			if (words[0] == "#DEF"){
 
+				isd_repl_block def;
+
 				if (words.size() < 2){
 					COUT_ERROR << "Too few words in '#DEF' block." << endl;
 					return false;
 				}
 
-				std::string rep_name = words[1];
+				//Check for argument description
+				if (words.size() == 5){
+					def.num_arg_expect = stoi(words[3]);
+				}else{
+					def.num_arg_expect = 0;
+				}
 
-				std::vector<fline> newrep;
+				std::string rep_name = words[1];
 
 				while (getline(file, line)) {
 
@@ -363,30 +375,77 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 					// Check if this is end of definition...
 					if (words[0] == "#END"){ //If so, save to replacement list
- 						replacements[rep_name] = newrep;
+ 						replacements[rep_name] = def;
 						break;
 					}else{ // Otherwise save line to new replacement being built
 						fline fn;
 						fn.lnum = line_num;
 						fn.str = line;
-						newrep.push_back(fn);
+						def.blk_content.push_back(fn);
 					}
 				}
 
 			}else if(words[0] == "#REPL"){
 
+				// Check at least #REPL and replacement block name provided
 				if (words.size() < 2){
 					COUT_ERROR << "Too few words in '#REPL' statement." << endl;
 					return false;
 				}
 
-
+				// Check that requirested repl.block exists
 				if (replacements.find(words[1]) == replacements.end()){
 					COUT_ERROR << "#REPL call accessed an undefined block '" << words[1] << "'." << endl;
 					return false;
 				}
 
-				contents.insert(std::end(contents), std::begin(replacements[words[1]]), std::end(replacements[words[1]]));
+				// If block requires arguments, ensure arguments are provided
+				if (words.size() - 2 != replacements[words[1]].num_arg_expect){
+					COUT_ERROR << "'#REPL' statement missing required arguments for block '" << words[1] << "'." << endl;
+					return false;
+				}
+
+				//Make a copy of block contents. Replace any arguments
+				vector<fline> block;
+				fline fn;
+				size_t arg_idx = 2; //Count the index in 'words' for the next argument to sub
+				string modstr;
+				for (size_t bi = 0 ; bi < replacements[words[1]].blk_content.size() ; bi++){ //For each line in the block...
+
+					modstr = replacements[words[1]].blk_content[bi].str;
+					size_t str_idx;
+
+					// Loop until all '@' are found and replaced with arguments
+					while (true){
+
+						//Search for an '@'
+						 str_idx = modstr.find("@");
+
+						//If '@' found:
+						if (str_idx != std::string::npos){
+
+							// Make sure haven't exceeded argument count
+							if (arg_idx-1 > words.size()){
+								COUT_ERROR << "Too many argument place holders in the block '" << words[1] << "'." << endl;
+								return false;
+							}
+
+							// Replace '@' with next argument (next argument is in 'words'). Increment arg_idx
+							modstr = modstr.substr(0, str_idx) + words[arg_idx++] + modstr.substr(str_idx+1);
+						}else{
+							break;
+						}
+
+					}
+
+					//Add to block
+					fn.str = modstr;
+					fn.lnum = replacements[words[1]].blk_content[bi].lnum;
+					block.push_back(fn);
+
+				}
+
+				contents.insert(std::end(contents), std::begin(block), std::end(block));
 
 			}else{
 
