@@ -194,6 +194,7 @@ vector<string> generate_LUT(map<string, operation> ops, vector<control_line> con
 	//Sort int_lines
 	sort(int_lines.begin(), int_lines.end(), sort_intline);
 
+	//Generate output LUT as strings from address and byte data
 	vector<string> lines;
 	lines.reserve(int_lines.size());
 	string line;
@@ -339,7 +340,7 @@ int main(int argc, char** argv){
 
 	std::string cw_filename;
 	if (argc < 3){
-		cw_filename = "./Source Files/syntax_demo.cw";
+		cw_filename = "./Source Files/Blinkenrechner.cw";
 	}else{
 		cw_filename = string(argv[2]);
 		cout << "Reading (CW): " << argv[2] << endl;
@@ -354,7 +355,7 @@ int main(int argc, char** argv){
 
 	std::string isd_filename;
 	if (argc < 2){
-		isd_filename = "./Source Files/syntax_demo.isd";
+		isd_filename = "./Source Files/Blinkenrechner.isd";
 	}else{
 		isd_filename = argv[1];
 	}
@@ -374,7 +375,7 @@ int main(int argc, char** argv){
 	std::vector<string> lut = generate_LUT(ops, controls);
 
 	cout << endl;
-	// print_lut(lut);
+	print_lut(lut);
 
 	string lut_out = "./ISVs/memorydelta.lut";
 	// if (save_lut(lut_out, lut)){
