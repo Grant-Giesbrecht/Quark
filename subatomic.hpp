@@ -19,15 +19,15 @@
 using namespace gstd;
 using namespace std;
 
-// #define FLAG_X 'X'
-// #define FLAG_SET 'S'
-// #define FLAG_CLR 'C'
+#define ALU_OPERATION 'X'
+#define FPU_OPERATION 'S'
+#define GENERAL_OPERATION 'C'
 
 typedef struct{
 	string name;
 	int instruction_no;
 	int data_bits;
-	// char flag;
+	char subsystem;
 	map <int, map<int, map<int, bool> > > ctrls; //Phase-Word-Pin (Data)
 	string desc;
 	string prgm_replac;
@@ -81,6 +81,7 @@ void clear_operation(operation& x){
 	x.ctrls.clear();
 	x.desc = "";
 	x.prgm_replac = "";
+	x.subsystem = GENERAL_OPERATION;
 }
 
 /*
@@ -476,6 +477,22 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				// }else{
 				// 	nextOp.flag = FLAG_X;
 				// }
+			}else if(words[0] == "#PROCESSOR"){
+
+				if (words.size() < 2){
+					COUT_ERROR << "Too few words in '#REPL' statement." << endl;
+					return false;
+				}
+
+				if (words[1] == "FPU"){
+					nextOp.subsystem = FPU_OPERATION;
+				}else if(words[1] == "ALU"){
+					nextOp.subsystem = ALU_OPERATION;
+				}else{
+					COUT_ERROR << "Unrecognized subsystem processor '" << words[1] << "'" << endl;
+					return false;
+				}
+
 			}else if (words[0] == "#END"){
 
 				COUT_ERROR << "Extraneous '#END' slipped through!" << endl;
@@ -757,7 +774,7 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, si
 	KTable kt;
 
 	kt.table_title("ISD Operation Summary");
-	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Description", "Prgm Inst. Mapping"});
+	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Subprocessor", "Description", "Prgm Inst. Mapping"});
 
 	std::vector<std::string> trow;
 	std::string desc_str;
@@ -770,6 +787,14 @@ void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, si
 		trow.push_back(""); //Phases
 		trow.push_back(to_string(it->second.instruction_no));
 		trow.push_back(to_string(it->second.data_bits));
+
+		if (it->second.subsystem == ALU_OPERATION){
+			trow.push_back("ALU");
+		}else if (it->second.subsystem == ALU_OPERATION){
+			trow.push_back("FPU");
+		}else{
+			trow.push_back("-");
+		}
 
 		desc_str = it->second.desc;
 		findAndReplaceAll(desc_str, "\n", "\\\\ ");
