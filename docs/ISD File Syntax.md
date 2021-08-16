@@ -46,7 +46,8 @@ Note: <> indicates the text inside is replaced with the value, and () indicates 
  8. _Block Definition:_ When `#DEF` appears, followed on a later line by `#END`,
  a the inbetween lines are used as a drop in replacement for when `#REPL` is called.
  A block name must appear on the same line as `#DEF` and must be followed by the
- number of arguments if its is nonzero.
+ number of arguments if its is nonzero. The argument number must be enclosed
+ within paretheses.
 
  8. _Replacement Block Arguments:_ Appear on the same line as normal
  `<Number>: <CTRL1> <CTRL2> ...` instructions in a replacement block, however `@`

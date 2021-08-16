@@ -401,7 +401,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 				// If block requires arguments, ensure arguments are provided
 				if (words.size() - 2 != replacements[words[1]].num_arg_expect){
-					COUT_ERROR << "'#REPL' statement missing required arguments for block '" << words[1] << "'." << endl;
+					COUT_ERROR << "'#REPL' statement missing required arguments (" << replacements[words[1]].num_arg_expect << ") for block '" << words[1] << "'." << endl;
 					return false;
 				}
 

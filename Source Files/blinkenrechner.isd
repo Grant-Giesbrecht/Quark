@@ -3,7 +3,6 @@
 
 // Fetches the instruction. Should appear as the first two phases of every
 // instruction.
-//
 #DEF FETCH_
 0: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 1: CU_PMEM_OE INST_REG_WR PC_CLK
@@ -19,10 +18,19 @@
 5: CU_PMEM_OE REG_AA8_WR PC_CLK
 #END
 
-// Fetches one byte of data behind the instruction and places it in
+// Fetches one byte of data behind the instruction and is intended to place it in
+// a register. To place it in a register, the register's write control line must
+// be passed as the sole argument.
 #DEF GET_8b_DATA_ (1)
 2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
-3: CU_PMEM_OE PC_CLK @1
+3: CU_PMEM_OE PC_CLK @
+#END
+
+// Variation of `GET_8b_DATA_` that also resets the PHI counter, and thus can
+// appear as the last instruction
+#DEF GET_8b_DATA_end_ (1)
+2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+3: CU_PMEM_OE PC_CLK PHI_RESET @
 #END
 
 * ADD 1 0
@@ -32,10 +40,11 @@
 2: _ADD_EN REGC_WR PHI_RESET
 
 * PMEM_REGA 2 1
-? Transfers
+? Transfers one byte of data that is stored with the instruction to REGA
 #REPL FETCH_
-#REPL GET_16b_ADDR_ REGA_WR
-3:
-4:
-5:
-6:
+#REPL GET_8b_DATA_end_ REGA_WR
+
+* PMEM_REGB 2 1
+? Transfers one byte of data that is stored with the instruction to REGB
+#REPL FETCH_
+#REPL GET_8b_DATA_end_ REGB_WR

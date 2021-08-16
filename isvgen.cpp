@@ -341,7 +341,7 @@ int main(int argc, char** argv){
 	if (argc < 3){
 		cw_filename = "./Source Files/syntax_demo.cw";
 	}else{
-		cw_filename = string(argv[1]);
+		cw_filename = string(argv[2]);
 		cout << "Reading (CW): " << argv[2] << endl;
 	}
 
