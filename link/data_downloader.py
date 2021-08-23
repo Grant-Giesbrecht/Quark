@@ -1,9 +1,20 @@
+# from IPython import get_ipython
+#
+# try:
+#     __IPYTHON__
+# except NameError:
+# 	print("Not in IPython")
+# else:
+# 	get_ipython().run_line_magic("reset", "-f")
+# 	print("In IPython")
+
 import pyvisa as pv
 import time
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta_downlink.bcm"
 # readlength = 1001;
-filename = "./Example Data/add_downlink.BML"
+filename = "./Example Data/blinken_downlink.lut"
+readlength = 4359;
 readlength = 30;
 
 lines_per_batch = 512

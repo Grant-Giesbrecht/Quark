@@ -2,7 +2,8 @@ import pyvisa as pv
 import time
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta.bcm"
-filename = "./Example Data/add.BML"
+# filename = "../ISVs/blinkenrechner.lut"
+filename = "./linktest.lut"
 lines_per_batch = 512
 
 t_upload = []

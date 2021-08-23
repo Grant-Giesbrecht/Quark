@@ -130,6 +130,8 @@ and fills the remaining phases with the default state. Because Z-III can abort
 an instruction early, it is probably neccesary for me to change this to instead
 skip to the next instruction. Furthermore, I should probably name it something
 like 'finish_operation()'
+
+?2 I think the above description is wrong and what it actually does is takes the *already populated* phases and fills them with default cases for missing words. ie. it doesn't add null phases, but rather completes the LUT with default data for everything that wasn't populated explicitly in the .ISD file.
 ?
 
 */
@@ -139,14 +141,17 @@ void fill_defaults(operation& nextOp, std::vector<control_line>& controls){
 	map<int, map<int, bool> >::iterator word_it;
 	map<int, bool>::iterator pin_it;
 
-	//For each phase
+	//For each phase that is populated...
 	for (phase_it = nextOp.ctrls.begin() ; phase_it != nextOp.ctrls.end() ; phase_it++){
 
 		//For each word
 		// for (word_it = phase_it->second.begin() ; word_it != phase_it->second.end() ; word_it++){
 		for (int word = 0 ; word < NUM_WORD ; word++){
 
+			// If `word` is not found in `ctrls`...
 			if (nextOp.ctrls[phase_it->first].find(word) == nextOp.ctrls[phase_it->first].end()){
+
+				// Add to ctrls
 				map<int, bool> temp_map;
 				nextOp.ctrls[phase_it->first][word] = temp_map;
 			}
@@ -158,6 +163,7 @@ void fill_defaults(operation& nextOp, std::vector<control_line>& controls){
 				// if (word_it->second.find(p) == word_it->second.end()){ //Pin not listed, take value from defaults
 				// 	nextOp.ctrls[phase_it->first][word_it->first][p] = get_control_default(controls, word_it->first, p);
 				// }
+
 				if (nextOp.ctrls[phase_it->first][word].find(p) == nextOp.ctrls[phase_it->first][word].end()){ //Pin not listed, take value from defaults
 					nextOp.ctrls[phase_it->first][word][p] = get_control_default(controls, word, p);
 				}
@@ -169,6 +175,39 @@ void fill_defaults(operation& nextOp, std::vector<control_line>& controls){
 
 	}
 
+
+}
+
+/*
+Unspecified instructions should report a 'bad instruction'.
+
+How to handle an undefined phase?
+*/
+void fill_missing_instructions(map<std::string, operation>& ops){
+
+	long int max_inst_code = 127;
+
+	//Create template for 'badinstruc' ie. a non-defined instruction
+	operation badinst;
+	badinst.name = "BADINST";
+	badinst.data_bits = 0;
+	badinst.subsystem = GENERAL_OPERATION;
+	badinst.desc = "";
+	badinst.prgm_replac = "";
+
+	//TODO: Finish! (22-8-2021)
+
+	// //Scan over all possible instructions
+	// for (for size_t inst_code = 0 ; inst_code <= max_inst_code ){
+	//
+	// 	// instruction was not defined
+	// 	if (){
+	//
+	// 		//Replace with badinstruc
+	//
+	// 	}
+	//
+	// }
 
 }
 

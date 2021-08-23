@@ -121,6 +121,7 @@ bool sort_intline(int_line x, int_line y){
 
 vector<string> generate_LUT(map<string, operation> ops, vector<control_line> controls){
 
+	//
 	map<string, operation>::iterator it;
 	map<int, map<int, map<int, bool> > >::iterator phase_it;
 	map<int, map<int, bool> >::iterator word_it;
@@ -377,12 +378,12 @@ int main(int argc, char** argv){
 	cout << endl;
 	print_lut(lut);
 
-	string lut_out = "./ISVs/memorydelta.lut";
-	// if (save_lut(lut_out, lut)){
-	// 	cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
-	// }else{
-	// 	cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
-	// }
+	string lut_out = "./ISVs/blinkenrechner.lut";
+	if (save_lut(lut_out, lut)){
+		cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
+	}else{
+		cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
+	}
 
 	cout << "\nTarget Architecture: " << isv.arch << endl;
 	cout << "\nISV Series: " << isv.series << endl;
