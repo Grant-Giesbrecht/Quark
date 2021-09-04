@@ -20,6 +20,8 @@ unsigned int write_time_delay = 1000; //in microseconds
 unsigned int read_time_delay = 1000; //in microseconds, time for data to be correct and stable on data bus after operation triggered
 unsigned int clear_pause_time = 1000000; //in microseconds, time for clear pause pin to be active
 
+bool erase_before_write = false;
+
 // FLash pins - OUTPUT
 #define PIN_LD_ADDR_S0 31
 #define PIN_LD_ADDR_S1 32
@@ -178,11 +180,16 @@ void setup() {
             }
 
             //Check for connection test (from data uploader -> WRITE mode)
-            if (load_idx == 1 && buffer[0] == 'T'){
+            if (load_idx == 1 && (buffer[0] == 'T' || buffer[0] == 'C')){
                 Serial.println("Hello from Arduino");
                 in_write_mode = true;
                 waiting_for_first_packet = false;
                 load_idx = 0;
+
+				// Check if erase signal was sent
+				if (buffer[0] == 'C'){
+					erase_before_write = true;
+				}
 
             }
 
@@ -201,6 +208,10 @@ void setup() {
 	digitalWrite(PIN_CPU_WR_EN_S0, LOW);
 	digitalWrite(PIN_CPU_WR_EN_S0, HIGH);
 	digitalWrite(PIN_CPU_WR_EN_S0, LOW);
+
+	if (erase_before_write){
+		chip_erase();
+	}
 
 
 }
@@ -280,9 +291,13 @@ void writer_loop() {
         }
 
         //Check for connection test
-        if (load_idx == 1 && buffer[0] == 'T'){
+        if (load_idx == 1 && (buffer[0] == 'T' || buffer[0] == 'C')){
             Serial.println("Hello from Arduino");
             load_idx = 0;
+
+			if (buffer[0] == 'C'){
+				chip_erase();
+			}
         }
 
         //Check for complete packet
@@ -502,7 +517,7 @@ bool write_byte(long address, int data){
 		delayMicroseconds(1);
 	}
 
-    //Set opcodes to read, incase something happens...
+    //Set opcodes to read, in case something happens...
     digitalWrite(PIN_OPCODE0, LOW);
     digitalWrite(PIN_OPCODE1, HIGH);
 
@@ -846,4 +861,27 @@ bool read_byte(long address, int& data){
     // digitalWrite(PIN_CHIP_ENABLE, HIGH);
 
     return true;
+}
+
+void chip_erase(){
+
+	//Set opcodes (to chip erase)
+    digitalWrite(PIN_OPCODE0, LOW);
+    digitalWrite(PIN_OPCODE1, LOW);
+
+    //Trigger operation
+    digitalWrite(PIN_TRIG_S0, HIGH);
+    digitalWrite(PIN_TRIG_S0, LOW);
+    delayMicroseconds(trigger_operation_time);
+    digitalWrite(PIN_TRIG_S0, HIGH);
+
+	// Wait for FMC to finish its routine
+	while (digitalRead(PIN_ACTIVE_S0) == HIGH){
+		delayMicroseconds(1);
+	}
+
+    //Set opcodes to read, in case something happens...
+    digitalWrite(PIN_OPCODE0, LOW);
+    digitalWrite(PIN_OPCODE1, HIGH);
+
 }

@@ -7,6 +7,8 @@ lines_per_batch = 512
 t_upload = []
 t_write = []
 
+chip_erase = True
+
 #Open connection to Arduino
 rm = pv.ResourceManager()
 try:
@@ -28,7 +30,10 @@ connected = False
 for i in range(10):
 
     dev.timeout = 1e3
-    dev.write("T")
+    if chip_erase:
+        dev.write("C")
+    else:
+        dev.write("T")
     try:
         dev.read()
     except pv.errors.VisaIOError:
