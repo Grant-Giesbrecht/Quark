@@ -44,7 +44,14 @@
 #REPL FETCH_
 #REPL GET_8b_DATA_end_ REGA_WR
 
-* PMEM_REGB 2 1
+//TODO: This instruction number is wrong!
+* PMEM_REGB 3 1
 ? Transfers one byte of data that is stored with the instruction to REGB
 #REPL FETCH_
 #REPL GET_8b_DATA_end_ REGB_WR
+
+//TODO: Add HCF
+* HCF 4 0
+? HALT, CATCH FIRE!
+#REPL FETCH_
+2: _HCF_SET=ON

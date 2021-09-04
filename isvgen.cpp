@@ -1,6 +1,8 @@
 /*
 Takes a .ISD and .CW and creates an instruction set version in a .LUT file.
 
+TODO:
+* Fix: if two instructions have the same instruction number, this will not be detected, no error will be given
 
 --------------------------------------------------------------------------------
 Created by G. Giesbrecht
