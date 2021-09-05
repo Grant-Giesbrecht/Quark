@@ -77,7 +77,6 @@ size_t read_cycle_end = DATA_BUFFER_SIZE;
 bool in_write_mode = false;
 
 void setup() {
-    Serial.begin(115200);
 
 	// Initialize bus pins
 	for (int i = 0  ; i  < 16 ; i++){
@@ -89,7 +88,7 @@ void setup() {
     }
 
 	// Bus buffer control pins
-	pinMode(PIN_WRDATA_BUS, OUTPUT);
+	pinMode(PIN_WRADDR_BUS, OUTPUT);
 	pinMode(PIN_WRDATA_BUS, OUTPUT);
 	digitalWrite(PIN_WRADDR_BUS, LOW);
 	digitalWrite(PIN_WRDATA_BUS, LOW);
@@ -110,7 +109,7 @@ void setup() {
 	pinMode(PIN_OPCODE0, OUTPUT);
 	pinMode(PIN_OPCODE1, OUTPUT);
 	digitalWrite(PIN_OPCODE0, LOW);
-	digitalWrite(PIN_OPCODE1, LOW);
+	digitalWrite(PIN_OPCODE1, HIGH);
 
 	// CPU Flash enable pins
 	pinMode(PIN_CPU_WR_EN_S0, OUTPUT);
@@ -151,6 +150,8 @@ void setup() {
 	// System state pins
 	pinMode(PIN_USB_PROG, INPUT);
 	pinMode(PIN_SYSTEM_PROGRAM, INPUT);
+
+	Serial.begin(115200);
 
     //Get first data from backend before differentiating into READ vs WRITE mode...
     bool waiting_for_first_packet = true;
