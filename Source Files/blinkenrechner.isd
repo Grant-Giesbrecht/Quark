@@ -33,6 +33,11 @@
 3: CU_PMEM_OE PC_CLK PHI_RESET @
 #END
 
+* VOID 0 0
+? Will be run as the first instruction, no matter what! Instruction register starts at 0
+#REPL FETCH_
+2: ERR_SET_BADINSTRUC //This line should never run. Can replace this instruction with something helpful.
+
 * ADD 1 0
 ? Adds the numbers in REGA and REGB and stores the result in REGC
 #PROCESSOR ALU
