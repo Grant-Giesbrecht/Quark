@@ -343,7 +343,7 @@ int main(int argc, char** argv){
 
 	std::string cw_filename;
 	if (argc < 3){
-		cw_filename = "./Source Files/Blinkenrechner.cw";
+		cw_filename = "./Source Files/blinkenrechner.cw";
 	}else{
 		cw_filename = string(argv[2]);
 		cout << "Reading (CW): " << argv[2] << endl;
@@ -358,7 +358,7 @@ int main(int argc, char** argv){
 
 	std::string isd_filename;
 	if (argc < 2){
-		isd_filename = "./Source Files/Blinkenrechner.isd";
+		isd_filename = "./Source Files/blinkenrechner.isd";
 	}else{
 		isd_filename = argv[1];
 	}
