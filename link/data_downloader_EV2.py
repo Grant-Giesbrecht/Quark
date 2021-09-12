@@ -25,172 +25,191 @@ t_write = []
 recd_addrs = []
 recd_data = []
 
+port = "BACK_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
+
 read_finished = False;
 
 #Open connection to Arduino
 rm = pv.ResourceManager()
 try:
-    addr = rm.list_resources()[1]
-    dev = rm.open_resource(addr, baud_rate = 115200)
-    # dev.baud_rate = 115200
+	if port == "FIRST":
+		addr_list = rm.list_resources()[1]
+	else:
+		addr_list = rm.list_resources()
+		addr = "INVALID"
+		for ad in addr_list:
+			if port == "BACK_LEFT":
+				if '14401' in ad:
+					addr = ad
+			elif port == "FRONT_LEFT":
+				if '14301' in ad:
+					addr = ad
+			elif port == "FRONT_RIGHT":
+				if '14201' in ad:
+					addr = ad
+			elif port == "BACK_RIGHT":
+				if '14101' in ad:
+					addr = ad
+	dev = rm.open_resource(addr, baud_rate = 115200)
+	# dev.baud_rate = 115200
 except Exception as e:
-    print("Failed to open device")
-    print(str(e))
-    exit()
+	print("Failed to open device")
+	print(str(e))
+	exit()
 
 def main():
 
 
-    # dev.timeout = 25e3 #Timeout in ms
+	# dev.timeout = 25e3 #Timeout in ms
 
-    #Print messages
-    print(f"Aquired device resource.\n\tAddress: \"{addr}\"")
-    print("Waiting to connect", end="", flush=True)
+	#Print messages
+	print(f"Aquired device resource.\n\tAddress: \"{addr}\"")
+	print("Waiting to connect", end="", flush=True)
 
-    #Send messages to device and wait until it responds...
-    connected = False
-    for i in range(10):
+	#Send messages to device and wait until it responds...
+	connected = False
+	for i in range(10):
 
-        dev.timeout = 1e3
-        dev.write("R")
-        try:
-            dev.read()
-        except pv.errors.VisaIOError:
-            print('.', end="", flush=True)
-        else:
-            connected = True
-            print("Connection verified - continuing\n")
-            break;
-    if not connected:
-        print("\nFailed to verify connection. Exiting.")
-        exit()
+		dev.timeout = 1e3
+		dev.write("R")
+		try:
+			dev.read()
+		except pv.errors.VisaIOError:
+			print('.', end="", flush=True)
+		else:
+			connected = True
+			print("Connection verified - continuing\n")
+			break;
+	if not connected:
+		print("\nFailed to verify connection. Exiting.")
+		exit()
 
-    #Read messages from the device just to make sure the buffer is clear
-    print("Clearing buffer", end="", flush=True)
-    num_reads = 0;
-    while (True):
-        try:
-            dev.read()
-        except pv.errors.VisaIOError:
-            break;
-        else:
-            num_reads += 1;
-    if num_reads == 0:
-        print(" \t\tNothing to clear. Continuing")
-    else:
-        print(f" \t\tCleared {num_reads} messages")
+	#Read messages from the device just to make sure the buffer is clear
+	print("Clearing buffer", end="", flush=True)
+	num_reads = 0;
+	while (True):
+		try:
+			dev.read()
+		except pv.errors.VisaIOError:
+			break;
+		else:
+			num_reads += 1;
+	if num_reads == 0:
+		print(" \t\tNothing to clear. Continuing")
+	else:
+		print(f" \t\tCleared {num_reads} messages")
 
-    #Set timeout to be longer
-    dev.timeout = 10e3 #ms
+	#Set timeout to be longer
+	dev.timeout = 10e3 #ms
 
-    print(f"\nDownloading data to file: {filename}")
+	print(f"\nDownloading data to file: {filename}")
 
-    # Send packet length - request read operation
-    print(f"\nRequesting read of length: {readlength}", end='', flush=True)
-    dev.write(f"L={readlength}*")
-    recd = dev.read().strip("\n").strip('\r')
-    #
-    #This double checks that there aren't some stray special chars in string
-    orig_len = len(recd)
-    recd = recd.replace('\n', '')
-    recd = recd.replace('\r', '')
-    had_bad = False
-    if (orig_len != len(recd)):
-        had_bad = True
-    #
-    if recd[0] == "G":
-        if (had_bad):
-            print("!", end='')
-        print("\tAcknowledged by Arduino")
-        print(f"\t\tBeginning read of length: {recd[1:]}")
-    else:
-        if (had_bad):
-            print("!", end='')
-        print(f"? \t'{recd}'")
-        exit();
+	# Send packet length - request read operation
+	print(f"\nRequesting read of length: {readlength}", end='', flush=True)
+	dev.write(f"L={readlength}*")
+	recd = dev.read().strip("\n").strip('\r')
+	#
+	#This double checks that there aren't some stray special chars in string
+	orig_len = len(recd)
+	recd = recd.replace('\n', '')
+	recd = recd.replace('\r', '')
+	had_bad = False
+	if (orig_len != len(recd)):
+		had_bad = True
+	#
+	if recd[0] == "G":
+		if (had_bad):
+			print("!", end='')
+		print("\tAcknowledged by Arduino")
+		print(f"\t\tBeginning read of length: {recd[1:]}")
+	else:
+		if (had_bad):
+			print("!", end='')
+		print(f"? \t'{recd}'")
+		exit();
 
-    print("Beginning read")
+	print("Beginning read")
 
-    while (True):
+	while (True):
 
-        listen_to_chipread()
+		listen_to_chipread()
 
-        if not get_downlink():
-            break;
+		if not get_downlink():
+			break;
 
 
 
-    print("\n\nRead complete")
-    print(f"\nSaving file {filename}")
-    save_to_file(filename)
+	print("\n\nRead complete")
+	print(f"\nSaving file {filename}")
+	save_to_file(filename)
 
 def listen_to_chipread():
-    print("Arduino is reading chip.")
-    print('\n|           | (* = 50 Bytes written)\r|', end='', flush=True);
-    while(True):
+	print("Arduino is reading chip.")
+	print('\n|           | (* = 50 Bytes written)\r|', end='', flush=True);
+	while(True):
 
-        recd = dev.read().strip('\n').strip('\r')
-        if recd == "Ready":
-            print("\nWrite complete. Sending next batch of data\n")
-            return;
-        elif recd == "U":
-            print("*", end='', flush=True)
-        else:
-            print(f"?({recd})", end='', flush=True)
-    print("Chip read phase complete")
+		recd = dev.read().strip('\n').strip('\r')
+		if recd == "Ready":
+			print("\nWrite complete. Sending next batch of data\n")
+			return;
+		elif recd == "U":
+			print("*", end='', flush=True)
+		else:
+			print(f"?({recd})", end='', flush=True)
+	print("Chip read phase complete")
 
 def get_downlink():
 
-    quit_after = False;
+	quit_after = False;
 
-    print("Downlink in process")
-    while (True):
+	print("Downlink in process")
+	while (True):
 
-        recd = dev.read().strip("\n").strip('\r')
+		recd = dev.read().strip("\n").strip('\r')
 
-        if recd == "E":
-            break;
+		if recd == "E":
+			break;
 
-        if recd == "D":
-            quit_after = True;
-            break;
+		if recd == "D":
+			quit_after = True;
+			break;
 
-        if process_data(recd):
-            dev.write("G")
-        else:
-            dev.write("B")
-    print("Downlink complete")
+		if process_data(recd):
+			dev.write("G")
+		else:
+			dev.write("B")
+	print("Downlink complete")
 
-    return not quit_after
+	return not quit_after
 
 
 def process_data(x:str):
 
-    print(x)
+	print(x)
 
-    try:
-        addr, data = x.split(":")
-        addr = int(addr)
-        data = int(data)
-    except Exception as e:
-        print(f"Packet failed! ({x})")
-        # print(str(e))
-        return False;
+	try:
+		addr, data = x.split(":")
+		addr = int(addr)
+		data = int(data)
+	except Exception as e:
+		print(f"Packet failed! ({x})")
+		# print(str(e))
+		return False;
 
-    recd_addrs.append(addr)
-    recd_data.append(data)
+	recd_addrs.append(addr)
+	recd_data.append(data)
 
 
 def save_to_file(save_filename:str):
 
-    if (len(recd_data) != len(recd_addrs)):
-        print("Wrong address length")
-        return
+	if (len(recd_data) != len(recd_addrs)):
+		print("Wrong address length")
+		return
 
-    with open(save_filename, 'w') as of:
-        for idx, a in enumerate(recd_addrs):
-            d = recd_data[idx]
-            of.write(f'{a}:{d}\n')
+	with open(save_filename, 'w') as of:
+		for idx, a in enumerate(recd_addrs):
+			d = recd_data[idx]
+			of.write(f'{a}:{d}\n')
 
 if __name__ == '__main__':
-    main()
+	main()
