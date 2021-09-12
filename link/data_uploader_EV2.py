@@ -2,8 +2,8 @@ import pyvisa as pv
 import time
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta.bcm"
-# filename = "../ISVs/blinkenrechner.lut"
-filename = "./linktest.lut"
+filename = "../ISVs/blinkenrechner.lut"
+# filename = "./linktest.lut"
 lines_per_batch = 512
 
 t_upload = []
@@ -22,7 +22,8 @@ try:
 		addr = "INVALID"
 		for ad in addr_list:
 			if port == "BACK_LEFT":
-				if '14401'
+				if '14401' in ad:
+					addr = ad
 			elif port == "FRONT_LEFT":
 				if '14301' in ad:
 					addr = ad
