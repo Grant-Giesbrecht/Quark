@@ -17,7 +17,7 @@ size_t file_len_max = 32768;
 
 int data_rd_pin[8] = {2, 3, 4, 5, 6, 7, 8, 9}; //From 0 to 7
 long addr_pin[15] = {22, 24, 26, 28, 30, 32, 34, 36,   40, 42, 44, 46, 48, 50, 52}; //From 0-14
-int data_wr_pin[8] = {23, 25, 27, 29, 31, 33, 35, 37};
+int data_wr_pin[8] = {23, 25, 27, 29, 31, 33, 35, 37}; // From 0 to 7
 int ctrl_pin[4] = {53, 51, 49, 47}; //From 1 to 5 (pin 0 is ground)
 
 #define PIN_STATUS_READ 14
