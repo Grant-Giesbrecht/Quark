@@ -263,7 +263,10 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 			trim_whitespace(line); //Remove whitespace from line
 
 			if (line.length() == 0) continue; //Continue if blank
-			if (line.length() >= 2 && line.substr(0, 2) == "//") continue; //Skip comments
+			if (line.length() >= 2 && line.substr(0, 2) == "//") continue; //Skip full-comment lines
+
+			//Immediately remove comments
+			trim_end_comment(line, "//"); //Remove end comments
 
 			//Parse words
 			gstd::ensure_whitespace(line, "*=@:!");
@@ -319,6 +322,12 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 				nextCtrl.active_low = true;
 			}else{
 				nextCtrl.active_low = false;
+			}
+
+			if (nextCtrl.name == "_RAMS0_WR"){
+				for (size_t i = 0 ; i < words.size() ; i++){
+					cout << words[i] << endl;
+				}
 			}
 
 			controls.push_back(nextCtrl);
