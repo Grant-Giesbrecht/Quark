@@ -87,7 +87,7 @@ int get_address_Zeta3(int phase, int instruction, int word){
 	int phase_weights[4] = {13, 8, 9, 11};
 	int instr_weights[7] = {14, 12, 7, 6, 5, 4, 10};
 	// int word_weights[4] = {0, 1, 2, 3};
-	int word_weights[4] = {3, 2, 1, 0};
+	int word_weights[4] = {3, 2, 1, 0}; //Flipped for BSM-159,1
 
 	vector<bool> bin_phase = gstd::int_to_bin(phase, 4);
 	vector<bool> bin_inst = gstd::int_to_bin(instruction, 6);
