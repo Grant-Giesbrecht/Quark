@@ -4,7 +4,7 @@
 // Fetches the instruction. Should appear as the first two phases of every
 // instruction.
 #DEF FETCH_
-0: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+0: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG //Shouldn't SR1_MAR_WR be SR0_MAR_WR
 1: CU_PMEM_OE INST_REG_WR PC_CLK
 #END
 

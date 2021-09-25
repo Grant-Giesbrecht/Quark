@@ -107,7 +107,7 @@ CACHE_D_WR			8:7		OFF
 
 FLAG_ZERO_SET		9:0		OFF
 FLAG_CARRY_SET		9:1		OFF
-_RAM_S1_OE			9:2		OFF!
+_RAM_S1_OE			9:2		OFF!			// I think I should rename this _RAMS1_OE
 FLAG_TIMER_INT_CLR	9:3		OFF
 FLAG_IN_ISR_SET		9:4		OFF
 FLAG_IN_ISR_CLR		9:5		OFF
@@ -176,7 +176,7 @@ _CACHE_A_OE			14:3	OFF!
 _CACHE_B_OE			14:4	OFF!
 _PC_OE				14:5	OFF!
 IS_FETCH			14:6	OFF
-_CU_RAM_OE			14:7	OFF!
+_CU_RAM_OE			14:7	OFF!					// I thinnk I should rename this _RAMS0_OE
 
 //***************** Word 15 *****************
 

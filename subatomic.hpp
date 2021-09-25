@@ -324,12 +324,6 @@ bool read_CW(string readfile, std::vector<control_line>& controls){
 				nextCtrl.active_low = false;
 			}
 
-			if (nextCtrl.name == "_RAMS0_WR"){
-				for (size_t i = 0 ; i < words.size() ; i++){
-					cout << words[i] << endl;
-				}
-			}
-
 			controls.push_back(nextCtrl);
 
 		}
