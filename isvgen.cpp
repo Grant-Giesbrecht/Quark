@@ -438,33 +438,33 @@ int get_address_Zeta2(int phase, int flag, int instruction, int word){
 //
 // }
 
-void print_lut(vector<string> bcm){
-	for (size_t i = 0 ; i < bcm.size() ; i++){
-		cout << bcm[i] << endl;
-	}
-}
-
-bool save_lut(string filename, vector<string> bcm){
-
-
-	srand(time(NULL));
-
-	ofstream file;
-	file.open (filename);
-
-	if (!file.is_open()){
-		return false;
-	}
-
-	for (size_t i = 0 ; i < bcm.size() ; i++){
-		file << bcm[i] << endl;
-	}
-
-	file.close();
-
-	return true;
-
-}
+// void print_lut(vector<string> bcm){
+// 	for (size_t i = 0 ; i < bcm.size() ; i++){
+// 		cout << bcm[i] << endl;
+// 	}
+// }
+//
+// bool save_lut(string filename, vector<string> bcm){
+//
+//
+// 	srand(time(NULL));
+//
+// 	ofstream file;
+// 	file.open (filename);
+//
+// 	if (!file.is_open()){
+// 		return false;
+// 	}
+//
+// 	for (size_t i = 0 ; i < bcm.size() ; i++){
+// 		file << bcm[i] << endl;
+// 	}
+//
+// 	file.close();
+//
+// 	return true;
+//
+// }
 
 // void print_contents(vector<fline> fl){
 //
@@ -528,18 +528,24 @@ int main(int argc, char** argv){
 	// Generate LUT
 	is.generate_LUT(false);
 
-	// cout << endl;
-	print_lut(is.lut_str);
-	//
-	// string lut_out = "./ISVs/blinkenrechner.lut";
-	// if (save_lut(lut_out, lut)){
-	// 	cout << "Successfully saved LUT data to file '" << lut_out << "'." << endl;
-	// }else{
-	// 	cout << "ERROR: Failed to write file '" << lut_out << "'!" << endl;
-	// }
-	//
-	// cout << "\nTarget Architecture: " << isv.arch << endl;
-	// cout << "\nISV Series: " << isv.series << endl;
+	// Display lookup table
+	is.print_lut();
+
+	// Get Look-Up Table Filename
+	string lut_filename = "./ISVs/blinkenrechner.lut";
+
+	// Save LUT file
+	if (is.save_lut(lut_filename)){
+		is.log.msg("Successfully saved LUT data to file '" + lut_filename);
+	}else{
+		is.log.msg("ERROR: Failed to write file '" + lut_filename);
+	}
+
+	// Print messages
+	cout << "\nTarget Architecture: " << is.isv.arch << endl;
+	cout << "\nISV Series: " << is.isv.series << endl;
+
+	cout << is.log.all() << endl;
 
 	return 0;
 }
