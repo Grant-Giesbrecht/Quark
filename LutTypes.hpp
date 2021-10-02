@@ -5,6 +5,7 @@
 #include "gstd.hpp"
 #include "subatomic.hpp"
 #include "gcolors.hpp"
+#include "GLogger.hpp"
 
 class InstructionSet{
 
@@ -18,6 +19,7 @@ public:
 	void print_cw();
 	void print_isd();
 	void print_operation_summary(size_t pin_cols = 4, size_t desc_len = 25);
+	void print_lut();
 
 	bool hasInstruction(size_t inst_no);
 	std::string getInstKey(size_t inst_no);
@@ -29,6 +31,10 @@ public:
 	int getDefaultValue(size_t ch_no, size_t pin_no);
 
 	void generate_LUT(bool useBadInstruc);
+
+	bool save_lut(std::string filename);
+
+	bool null_instruc_warning_given;
 
 	// Read from files
 	std::vector<control_line> ctrls;
@@ -42,11 +48,15 @@ public:
 	vector<int_line> lut_int;
 	vector<std::string> lut_str;
 
+	// Create logger
+	GLogger log;
 
 };
 
 InstructionSet::InstructionSet(){
 	//Do nothing
+
+	null_instruc_warning_given = false;
 }
 
 bool InstructionSet::load_cw(std::string filename){
@@ -216,7 +226,11 @@ void InstructionSet::addNullInst(size_t inst_no, bool useBadInstruc){
 // If useBadInstruc is true, will replace non-fetch phases with bad instruction
 // markers. Otherwise, the null instruction will just contain fetch instructions.
 
-
+	if (!null_instruc_warning_given){
+		cout << gcolor::yellow << "WARNING: Null instruction not provided." << gcolor::normal << endl;
+		log.warning("Null instruction not provided.");
+		null_instruc_warning_given = true;
+	}
 
 }
 
@@ -229,7 +243,8 @@ bool InstructionSet::getActiveLow(size_t channel, size_t pin){
 	bool found_idx;
 	size_t idx = getControlWireIdx(channel, pin, found_idx);
 	if (!found_idx){
-		cout << gcolor::red << "WARNING: Shit! Failed to find the wire :'('" << gcolor::normal << endl;
+		cout << gcolor::red << "WARNING: Shit! Failed to find the wire :'(" << gcolor::normal << endl;
+		log.error("Shit! Failed to find the wire :'(", true);
 		return -1;
 	}
 
@@ -251,6 +266,7 @@ int InstructionSet::getPinValue(size_t inst_no, size_t phs_no, size_t ch_no, siz
 	// instead of 1-8).
 	if (pin_no > 100){
 		cout << gcolor::red << "WARNING: Wrong pin indexing. THis is definitely going to crash!" << gcolor::normal << endl;
+		log.error("Wrong pin indexing. THis is definitely going to crash!", true);
 	}
 
 	// Get instruction key
@@ -276,6 +292,7 @@ int InstructionSet::getDefaultValue(size_t ch_no, size_t pin_no){
 	size_t idx = getControlWireIdx(ch_no, pin_no, found_idx);
 	if (!found_idx){
 		cout << gcolor::red << "WARNING: Shit! Failed to find the wire :'(" << gcolor::normal << endl;
+		log.error("Shit! Failed to find the wire :'(", true);
 		return -1;
 	}
 
@@ -314,6 +331,8 @@ void InstructionSet::generate_LUT(bool useBadInstruc){
 			if ( phs_no >= numPhase(inst_no) ){
 				if (useBadInstruc){
 					cout << "Bad Instruction not implemented!" << endl;
+					log.warning("Bad Instruction requested but *not* implemeented!");
+					useBadInstruc = false; // TODO: remove this when implement bad instruc
 				}else{
 					break;
 				}
@@ -371,5 +390,33 @@ void InstructionSet::generate_LUT(bool useBadInstruc){
 		line = to_string(lut_int[i].addr) + ":" + to_string(lut_int[i].byte);
 		lut_str.push_back(line);
 	}
+
+}
+
+void InstructionSet::print_lut(){
+	for (size_t i = 0 ; i < lut_str.size() ; i++){
+		cout << lut_str[i] << endl;
+	}
+}
+
+bool InstructionSet::save_lut(std::string filename){
+
+
+	srand(time(NULL));
+
+	ofstream file;
+	file.open (filename);
+
+	if (!file.is_open()){
+		return false;
+	}
+
+	for (size_t i = 0 ; i < lut_str.size() ; i++){
+		file << lut_str[i] << endl;
+	}
+
+	file.close();
+
+	return true;
 
 }
