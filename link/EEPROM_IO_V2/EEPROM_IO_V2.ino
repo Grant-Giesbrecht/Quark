@@ -15,16 +15,27 @@ size_t file_len_max = 32768;
 // long addr_pin[15] = {46, 44, 42, 40, 38, 36, 34, 32, 33, 35, 41, 37, 30, 31, 28}; //From 0-14
 // int data_pin[8] = {48, 50, 52, 53, 51, 49, 47, 45}; //From 0-7
 
-int data_rd_pin[8] = {2, 3, 4, 5, 6, 7, 8, 9}; //From 0 to 7
-long addr_pin[15] = {22, 24, 26, 28, 30, 32, 34, 36,   40, 42, 44, 46, 48, 50, 52}; //From 0-14
-int data_wr_pin[8] = {23, 25, 27, 29, 31, 33, 35, 37}; // From 0 to 7
-int ctrl_pin[4] = {53, 51, 49, 47}; //From 1 to 5 (pin 0 is ground)
+// int data_rd_pin[8] = {2, 3, 4, 5, 6, 7, 8, 9}; //From 0 to 7
+// long addr_pin[15] = {22, 24, 26, 28, 30, 32, 34, 36,   40, 42, 44, 46, 48, 50, 52}; //From 0-14
+// int data_wr_pin[8] = {23, 25, 27, 29, 31, 33, 35, 37}; // From 0 to 7
+// int ctrl_pin[4] = {53, 51, 49, 47}; //From 1 to 5 (pin 0 is ground)
+//
+// #define PIN_STATUS_READ 14
+// #define PIN_STATUS_WRITE 15
+// #define PIN_STATUS_LINK 16
+// #define PIN_STATUS_ERROR 18
+// #define PIN_STATUS_PROGRAM 17
 
-#define PIN_STATUS_READ 14
-#define PIN_STATUS_WRITE 15
-#define PIN_STATUS_LINK 16
-#define PIN_STATUS_ERROR 18
-#define PIN_STATUS_PROGRAM 17
+int data_rd_pin[8] = {22, 21, 20, 19, 18, 17, 16, 15}; //From 0 to 7
+long addr_pin[15] = {53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33, 31, 29, 27, 25}; //From 0-14
+int data_wr_pin[8] = {38, 36, 34, 32, 30, 38, 26, 24}; // From 0 to 7
+int ctrl_pin[4] = {52, 50, 48, 46}; //From 1 to 5 (pin 0 is ground)
+
+#define PIN_STATUS_READ 2
+#define PIN_STATUS_WRITE 6
+#define PIN_STATUS_LINK 10
+#define PIN_STATUS_ERROR 4
+#define PIN_STATUS_PROGRAM 7
 
 
 #define PIN_WE ctrl_pin[2]
