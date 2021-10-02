@@ -12,6 +12,9 @@
 #include <cmath>
 #include <ctgmath>
 
+#ifndef SUBATOMIC_HPP
+#define SUBATOMIC_HPP
+
 #define NUM_WORD 8
 
 #define COUT_ERROR cout << "ERROR [f='" << readfile << "'][L=" << to_string(line_num) << "]: "
@@ -60,9 +63,18 @@ typedef struct{
 }isd_repl_block;
 
 typedef struct{
+	int addr;
+	int byte;
+}int_line;
+
+typedef struct{
 	std::vector<fline> contents;
 	map<std::string, isd_repl_block> repl;
 }isd_internal;
+
+bool sort_intline(int_line x, int_line y){
+	return x.addr < y.addr;
+}
 
 void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
     // Get the first occurrence
@@ -74,6 +86,44 @@ void findAndReplaceAll(std::string & data, std::string toSearch, std::string rep
         // Get the next occurrence from the current position
         pos =data.find(toSearch, pos + replaceStr.size());
     }
+}
+
+/*
+Takes the instruction, word, and phase as arguments and returns a ROM address which
+must contain that data.
+
+NOTE: This function is CPU specific. The weights at the top of the function
+definition must be modified for new CPU designs.
+*/
+int get_address_Zeta3(int phase, int instruction, int word){
+
+	int phase_weights[4] = {13, 8, 9, 11};
+	int instr_weights[7] = {14, 12, 7, 6, 5, 4, 10};
+	// int word_weights[4] = {0, 1, 2, 3};
+	int word_weights[4] = {3, 2, 1, 0}; //Flipped for BSM-159,1
+
+	vector<bool> bin_phase = gstd::int_to_bin(phase, 4);
+	vector<bool> bin_inst = gstd::int_to_bin(instruction, 6);
+	vector<bool> bin_word = gstd::int_to_bin(word, 4);
+
+	int shifted_phase = 0;
+	for (size_t i = 0 ; i < 4 ; i++){
+		if (bin_phase[i]) shifted_phase += round(pow(2, phase_weights[i]));
+	}
+
+	int shifted_instr = 0;
+	for (size_t i = 0 ; i < 6 ; i++){
+		if (bin_inst[i]) shifted_instr += round(pow(2, instr_weights[i]));
+	}
+
+	int shifted_word = 0;
+	for (size_t i = 0 ; i < 4 ; i++){
+		if (bin_word[i]) shifted_word += round(pow(2, word_weights[i]));
+	}
+
+	int addr = shifted_phase + shifted_instr + shifted_word;
+	return addr;
+
 }
 
 /*
@@ -781,35 +831,35 @@ void print_controls_old(vector<control_line> controls){
 	}
 }
 
-void print_controls(vector<control_line> controls){
-
-	KTable kt;
-
-	kt.table_title("Control Wiring Summary");
-	kt.row({"Ctrl Line Name", "Ctrl Word", "Pin", "Active Low", "Default State"});
-
-	std::vector<std::string> trow;
-	for (size_t i = 0 ; i < controls.size() ; i++){
-
-		trow.clear();
-
-		trow.push_back(controls[i].name);
-		trow.push_back(to_string(controls[i].word));
-		trow.push_back(to_string(controls[i].pin));
-		trow.push_back(bool_to_str(controls[i].active_low));
-		if (controls[i].default_to_on){
-			trow.push_back("ON");
-		}else{
-			trow.push_back("OFF");
-		}
-
-
-		kt.row(trow);
-	}
-
-	cout << kt.str() << endl;
-
-}
+// void print_controls(vector<control_line> controls){
+//
+// 	KTable kt;
+//
+// 	kt.table_title("Control Wiring Summary");
+// 	kt.row({"Ctrl Line Name", "Ctrl Word", "Pin", "Active Low", "Default State"});
+//
+// 	std::vector<std::string> trow;
+// 	for (size_t i = 0 ; i < controls.size() ; i++){
+//
+// 		trow.clear();
+//
+// 		trow.push_back(controls[i].name);
+// 		trow.push_back(to_string(controls[i].word));
+// 		trow.push_back(to_string(controls[i].pin));
+// 		trow.push_back(bool_to_str(controls[i].active_low));
+// 		if (controls[i].default_to_on){
+// 			trow.push_back("ON");
+// 		}else{
+// 			trow.push_back("OFF");
+// 		}
+//
+//
+// 		kt.row(trow);
+// 	}
+//
+// 	cout << kt.str() << endl;
+//
+// }
 
 /*
 Prints a map of strings to operations.
@@ -865,59 +915,62 @@ void print_operations_full(map<string, operation> ops, size_t pin_cols = 4){
 /*
 Prints a map of strings to operations.
 */
-void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, size_t desc_len = 25){
-
-	map<string, operation>::iterator it;
-	map<int, map<int, map<int, bool> > >::iterator phase_it;
-	map<int, map<int, bool> >::iterator word_it;
-	map<int, bool>::iterator pin_it;
-
-	KTable kt;
-
-	kt.table_title("ISD Operation Summary");
-	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Subprocessor", "Description", "Prgm Inst. Mapping"});
-
-	std::vector<std::string> trow;
-	std::string desc_str;
-
-	//For each operation
-	for ( it = ops.begin(); it != ops.end(); it++){
-
-		trow.clear();
-		trow.push_back(it->second.name);
-		trow.push_back(""); //Phases
-		trow.push_back(to_string(it->second.instruction_no));
-		trow.push_back(to_string(it->second.data_bits));
-
-		if (it->second.subsystem == ALU_OPERATION){
-			trow.push_back("ALU");
-		}else if (it->second.subsystem == ALU_OPERATION){
-			trow.push_back("FPU");
-		}else{
-			trow.push_back("-");
-		}
-
-		desc_str = it->second.desc;
-		findAndReplaceAll(desc_str, "\n", "\\\\ ");
-		if (desc_str.length() > desc_len){
-			desc_str = desc_str.substr(0, desc_len-3) + "...";
-		}
-		trow.push_back(desc_str);
-
-		trow.push_back(it->second.prgm_replac);
-
-
-
-		kt.row(trow);
-
-	}
-
-	cout << kt.str() << endl;
-
-}
+// void print_operation_summary(map<string, operation> ops, size_t pin_cols = 4, size_t desc_len = 25){
+//
+// 	map<string, operation>::iterator it;
+// 	map<int, map<int, map<int, bool> > >::iterator phase_it;
+// 	map<int, map<int, bool> >::iterator word_it;
+// 	map<int, bool>::iterator pin_it;
+//
+// 	KTable kt;
+//
+// 	kt.table_title("ISD Operation Summary");
+// 	kt.row({"Operation", "Phases", "Operation Code", "No. Data Bytes", "Subprocessor", "Description", "Prgm Inst. Mapping"});
+//
+// 	std::vector<std::string> trow;
+// 	std::string desc_str;
+//
+// 	//For each operation
+// 	for ( it = ops.begin(); it != ops.end(); it++){
+//
+// 		trow.clear();
+// 		trow.push_back(it->second.name);
+// 		trow.push_back(""); //Phases
+// 		trow.push_back(to_string(it->second.instruction_no));
+// 		trow.push_back(to_string(it->second.data_bits));
+//
+// 		if (it->second.subsystem == ALU_OPERATION){
+// 			trow.push_back("ALU");
+// 		}else if (it->second.subsystem == ALU_OPERATION){
+// 			trow.push_back("FPU");
+// 		}else{
+// 			trow.push_back("-");
+// 		}
+//
+// 		desc_str = it->second.desc;
+// 		findAndReplaceAll(desc_str, "\n", "\\\\ ");
+// 		if (desc_str.length() > desc_len){
+// 			desc_str = desc_str.substr(0, desc_len-3) + "...";
+// 		}
+// 		trow.push_back(desc_str);
+//
+// 		trow.push_back(it->second.prgm_replac);
+//
+//
+//
+// 		kt.row(trow);
+//
+// 	}
+//
+// 	cout << kt.str() << endl;
+//
+// }
 
 void isv_explorer(map<string, operation> ops, vector<control_line> controls){
 
 
 
 }
+
+
+#endif
