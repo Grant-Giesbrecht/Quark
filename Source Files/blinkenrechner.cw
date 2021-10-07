@@ -4,21 +4,25 @@
 // G. Giesbrecht
 // 15-8-2021
 
+// Notes:
+// * (BHM-159,10 Inverted): This signal would be (-) logic, except BHM-159,10
+//   caused this to be inverted between Z-III and Sys.B.
+
 //***************** Word 0 *****************
 
 DT2S0_ADDR_WR		0:0		OFF
 DT2S0_DATA_BUF_WR	0:1		OFF
-_FLASH0_TRIG_RAW	0:2		OFF!
-_FLASH1_TRIG_RAW	0:3		OFF!
+FLASH0_TRIG_RAW 	0:2		OFF	//Note: *(BHM-159,10 Inverted)
+FLASH1_TRIG_RAW 	0:3		OFF	//Note: *(BHM-159,10 Inverted)
 DT2S1_ADDR_WR		0:4		OFF
 DT2S1_DATA_BUF_WR	0:5		OFF
 SR1_MAR_WR			0:6		OFF
-_RAMS1_WR			0:7		OFF!	//TODO: IS THIS ACTUALLY INVERTED?
+RAMS1_WR			0:7		OFF	//Note: *(BHM-159,10 Inverted)
 
 //***************** Word 1 *****************
 
 SR0_MAR_WR			1:0		OFF
-_RAMS0_WR			1:1		OFF!	//TODO: IS THIS ACTUALLY
+RAMS0_WR			1:1		OFF	//Note: *(BHM-159,10 Inverted)
 FCP_WR_A0			1:2		OFF
 FCP_WR_A1			1:3		OFF
 FCP_WR_A2			1:4		OFF
@@ -107,7 +111,7 @@ CACHE_D_WR			8:7		OFF
 
 FLAG_ZERO_SET		9:0		OFF
 FLAG_CARRY_SET		9:1		OFF
-_RAM_S1_OE			9:2		OFF!			// I think I should rename this _RAMS1_OE
+RAMS1_OE			9:2		OFF			// Previously named _RAM_S1_OE
 FLAG_TIMER_INT_CLR	9:3		OFF
 FLAG_IN_ISR_SET		9:4		OFF
 FLAG_IN_ISR_CLR		9:5		OFF
@@ -176,7 +180,7 @@ _CACHE_A_OE			14:3	OFF!
 _CACHE_B_OE			14:4	OFF!
 _PC_OE				14:5	OFF!
 IS_FETCH			14:6	OFF
-_CU_RAM_OE			14:7	OFF!					// I thinnk I should rename this _RAMS0_OE
+RAMS0_OE			14:7	OFF	// Previously called _CU_RAM_OE, previously active low
 
 //***************** Word 15 *****************
 

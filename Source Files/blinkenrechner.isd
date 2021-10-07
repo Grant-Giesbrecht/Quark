@@ -4,7 +4,7 @@
 // Fetches the instruction. Should appear as the first two phases of every
 // instruction.
 #DEF FETCH_
-0: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG //Shouldn't SR1_MAR_WR be SR0_MAR_WR
+0: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 1: CU_PMEM_OE INST_REG_WR PC_CLK
 #END
 
@@ -12,9 +12,9 @@
 // address assembly registers (ie. AA0 and AA8). Used for accessing an address
 // stored with the instruction.
 #DEF GET_16b_ADDR_
-2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+2: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 3: CU_PMEM_OE REG_AA0_WR PC_CLK
-4: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+4: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 5: CU_PMEM_OE REG_AA8_WR PC_CLK
 #END
 
@@ -22,14 +22,14 @@
 // a register. To place it in a register, the register's write control line must
 // be passed as the sole argument.
 #DEF GET_8b_DATA_ (1)
-2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+2: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 3: CU_PMEM_OE PC_CLK @
 #END
 
 // Variation of `GET_8b_DATA_` that also resets the PHI counter, and thus can
 // appear as the last instruction
 #DEF GET_8b_DATA_end_ (1)
-2: _PC_OE DT2S0_ADDR_WR SR1_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+2: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 3: CU_PMEM_OE PC_CLK PHI_RESET @
 #END
 
