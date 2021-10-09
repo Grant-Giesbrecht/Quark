@@ -27,9 +27,11 @@ size_t file_len_max = 32768;
 // #define PIN_STATUS_PROGRAM 17
 
 int data_rd_pin[8] = {22, 21, 20, 19, 18, 17, 16, 15}; //From 0 to 7
-long addr_pin[15] = {53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33, 31, 29, 27, 25}; //From 0-14
-int data_wr_pin[8] = {38, 36, 34, 32, 30, 38, 26, 24}; // From 0 to 7
-int ctrl_pin[4] = {52, 50, 48, 46}; //From 1 to 5 (pin 0 is ground)
+// long addr_pin[15] = {53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33, 31, 29, 27, 25}; //From 0-14
+long addr_pin[15] = {39, 37, 35, 33, 31, 29, 27, 25, 53, 51, 49, 47, 45, 43, 41}; // From 0-14. Shuffled around for 8-14, 0-7 order present on CPU
+int data_wr_pin[8] = {38, 36, 34, 32, 30, 28, 26, 24}; // From 0 to 7
+// int ctrl_pin[4] = {52, 50, 48, 46}; //From 1 to 5 (pin 0 is ground)
+int ctrl_pin[4] = {46, 48, 50, 52}; //From 1 to 5 (pin 0 is ground)
 
 #define PIN_STATUS_READ 2
 #define PIN_STATUS_WRITE 6
