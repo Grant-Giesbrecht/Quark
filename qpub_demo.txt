@@ -1,0 +1,13 @@
+qpub
+	-> Created: Berghheim 0.0.4 (20-10-2021)
+	-> Published files:
+		* Blinkenrechner.isd
+		* Blinkenrechner.cw
+		* Blinkenrechner.lut
+		* Publisher Log.txt
+	-> Added to cartography:
+		* Bergheim_0_0_4.qm
+	-> Map and changelog referenced to:
+		Bergheim 0.0.3 (20-10-2021)
+
+qpub -S "Bergheim" -V 0.0.4 -nomap (-map) -nolog (-log) -silent (-verbose)

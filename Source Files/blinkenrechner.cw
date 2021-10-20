@@ -12,8 +12,8 @@
 
 DT2S0_ADDR_WR		0:0		OFF
 DT2S0_DATA_BUF_WR	0:1		OFF
-FLASH0_TRIG_RAW 	0:2		OFF	//Note: *(BHM-159,10 Inverted)
-FLASH1_TRIG_RAW 	0:3		OFF	//Note: *(BHM-159,10 Inverted)
+_FLASH0_TRIG_RAW 	0:2		OFF!	//Note: *(BHM-159,10 Inverted) Inverted again w/ BHM-159,13
+_FLASH1_TRIG_RAW 	0:3		OFF!	//Note: *(BHM-159,10 Inverted) Inverted again w/ BHM-159,13
 DT2S1_ADDR_WR		0:4		OFF
 DT2S1_DATA_BUF_WR	0:5		OFF
 SR1_MAR_WR			0:6		OFF
@@ -90,7 +90,7 @@ EXPS1_CTRL7			6:7		OFF
 EXPS1_CTRL8			7:0		OFF
 EXPS1_CTRL9			7:1		OFF
 EXPS1_CTRL10		7:2		OFF
-_PMEM_TRIG			7:3		OFF! //TODO: HOW DOES PMEM_TRIG WORK?
+_PMEM_TRIG			7:3		OFF!
 _FCP_OE_C0			7:4		OFF!
 _FCP_OE_C1			7:5		OFF!
 _FCP_OE_C2			7:6		OFF!
@@ -111,7 +111,7 @@ CACHE_D_WR			8:7		OFF
 
 FLAG_ZERO_SET		9:0		OFF
 FLAG_CARRY_SET		9:1		OFF
-RAMS1_OE			9:2		OFF			// Previously named _RAM_S1_OE
+_RAMS1_OE			9:2		OFF!			// Previously named _RAM_S1_OE
 FLAG_TIMER_INT_CLR	9:3		OFF
 FLAG_IN_ISR_SET		9:4		OFF
 FLAG_IN_ISR_CLR		9:5		OFF
@@ -180,7 +180,7 @@ _CACHE_A_OE			14:3	OFF!
 _CACHE_B_OE			14:4	OFF!
 _PC_OE				14:5	OFF!
 IS_FETCH			14:6	OFF
-RAMS0_OE			14:7	OFF	// Previously called _CU_RAM_OE, previously active low
+_RAMS0_OE			14:7	OFF!	// Previously called _CU_RAM_OE, previously active low
 
 //***************** Word 15 *****************
 

@@ -4,3 +4,6 @@ LIBS = -L/Users/grantgiesbrecht/Documents/GitHub/gstd -lgstd -I/Users/grantgiesb
 
 isvgen: isvgen.cpp subatomic.hpp LutTypes.hpp
 	$(CC) -o isvgen isvgen.cpp $(LIBS)
+
+isvpub: isvpub.cpp subatomic.hpp
+	$(CC) -o isvpub isvpub.cpp $(LIBS)

@@ -282,6 +282,80 @@ bool get_word_pin(std::string ctrl_line, std::vector<control_line> controls, int
 }
 
 /*
+
+*/
+bool load_conf(string readfile, std::map<std::string, std::string>& settings){
+
+	settings.clear();
+
+	vector<string_idx> words;
+
+	size_t line_num = 0;
+
+	//read through file
+	ifstream file(readfile.c_str());
+	if (file.is_open()) {
+
+		string line;
+
+		control_line nextCtrl;
+
+		while (getline(file, line)) {
+
+			line_num++;
+
+			trim_whitespace(line); //Remove whitespace from line
+
+			if (line.length() == 0) continue; //Continue if blank
+			if (line.length() >= 2 && line.substr(0, 2) == "//") continue; //Skip full-comment lines
+
+			//Immediately remove comments
+			trim_end_comment(line, "//"); //Remove end comments
+
+			//Parse words
+			gstd::ensure_whitespace(line, "=");
+			words = gstd::parseIdx(line, " \t");
+
+			//Ensure words exist
+			if (words.size() < 1){
+				continue;
+			}
+
+			//Check for fewer than min characters
+			if (words.size() < 3){
+				COUT_ERROR << "Too few words." << endl;
+				return false;
+			}
+
+			//Check for missing colon
+			if (words[1].str != "="){
+				COUT_ERROR << "2nd token (" << words[1].str << ") must be colon." << endl;
+				return false;
+			}
+
+			//Get name
+			settings[words[0].str] = line.substr(words[2].idx);
+
+		}
+		file.close();
+	}else{
+		cout << "ERROR: Failed to read '" << readfile << "'." << endl;
+		return false;
+	}
+
+	return true;
+
+}
+
+void show_conf(std::map<std::string, std::string> settings){
+
+	for(std::map<string,string>::iterator it = settings.begin(); it != settings.end(); it++) {
+		std::cout << "\t" << it->first <<  " = " << it->second << std::endl;
+	}
+
+}
+
+/*
 Reads a .cw (control wiring) file. This file describes how control lines are
 physically addressed in the CPU, and thus allows them to be assigned addresses in
 the LUT.
