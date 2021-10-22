@@ -35,6 +35,12 @@ namespace gc = gstd::gcolor;
 #define GENERAL_OPERATION 'C'
 
 typedef struct{
+	vector<string> new_instructions;
+	vector<string> removed_instructions;
+	vector<string> modified_isntructions;
+}isv_delta;
+
+typedef struct{
 	string name;
 	int instruction_no;
 	int data_bits;
@@ -337,7 +343,17 @@ bool get_word_pin(std::string ctrl_line, std::vector<control_line> controls, int
 }
 
 /*
+Find differences between two instruction sets
+*/
+// isv_delta get_version_diff(InstructionSet is_new, InstructionSet is_old){
+//
+// 	// Check for changes in wiring
+//
+//
+// }
 
+/*
+Loads a configuration file conta
 */
 bool load_conf(std::string readfile, std::map<std::string, std::string>& settings){
 
@@ -446,7 +462,11 @@ isv_data newest_version(std::vector<isv_data> ver){
 	return blank;
 }
 
-bool read_arch_version(isv_data id, InstructionSet& is){
+/*
+Reads a specific LUT version (the ISD files and CW files) into an INstructionSet
+class, given the location of the version in the archive (in an isv_data object).
+*/
+bool read_arch_version(isv_data id, InstructionSet& is, string& cw_fn, string& isd_fn){
 
 	bool found_cw = false;
 	bool found_isd = false;
@@ -457,12 +477,14 @@ bool read_arch_version(isv_data id, InstructionSet& is){
 	for (const auto & entry : fs::directory_iterator(id.path)){
 
 		// Check if file is desired type
-		if (to_upper(entry.path().extension()) == "CW"){
+		if (to_upper(entry.path().extension()) == ".CW"){
 			cw_path = entry.path();
-			found_isd = true;
-		}else if(to_upper(entry.path().extension()) == "ISD"){
-			isd_path = entry.path();
 			found_cw = true;
+			cw_fn = entry.path().filename();
+		}else if(to_upper(entry.path().extension()) == ".ISD"){
+			isd_path = entry.path();
+			found_isd = true;
+			isd_fn = entry.path().filename();
 		}
 	}
 
