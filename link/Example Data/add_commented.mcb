@@ -1,6 +1,6 @@
 0:2		// PMEM_REGA
 1:7		// (DATA)
 2:3		// PMEM_REGB
-3:34	// (DATA)
+3:34		// (DATA)
 4:1		// ADD
 5:4		// HALT-CATCH-FIRE
