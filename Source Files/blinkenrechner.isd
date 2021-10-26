@@ -1,5 +1,5 @@
 #ARCH Matterhorn821
-#SERIES PT
+#SERIES Proto
 
 // Fetches the instruction. Should appear as the first two phases of every
 // instruction.
@@ -36,10 +36,15 @@
 5: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
 6: CU_PMEM_OE PC_CLK PHI_RESET @
 #END
-// #DEF GET_8b_DATA_end_ (1)
-// 2: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
-// 3: CU_PMEM_OE PC_CLK PHI_RESET @
-// #END
+
+#DEF GET_16b_ADDR_
+4: _PC_OE DT2S0_WR SR0_MAR_WR
+5: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+6: CU_PMEM_OE PC_CLK REG_AA0_WR
+7: _PC_OE DT2S0_WR SR0_MAR_WR
+8: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+9: CU_PMEM_OE PC_CLK REG_AA8_WR
+#END
 
 * VOID 0 0
 ? Will be run as the first instruction, no matter what! Instruction register starts at 0
@@ -68,3 +73,17 @@
 ? HALT, CATCH FIRE!
 #REPL FETCH_
 4: _HCF_SET=ON
+
+* REGC_RAM0 5 2
+? Transfers contents of REGC to RAM at 16 bit address specified in argument
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _REGC_OE  RAMS0_WR PHI_RESET
+
+* RAM0_REGC 6 2
+? Transfers data at RAM w/ specified 16 bit address to register C
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _RAMS0_OE REGC_WR PHI_RESET
