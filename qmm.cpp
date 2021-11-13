@@ -8,7 +8,9 @@ Created by G. Giesbrecht
 7-11-2021
 */
 
-//CXCOMPILE make isvpub
+//CXCOMPILE make qmm
+//CXCOMPILE ./qmm ../Quark-Programs/BrPgm-3/BrPgm3.q--
+//CXGENRUN FALSE
 
 #include <iostream>
 #include <string>
@@ -48,12 +50,9 @@ typedef struct{
 
 int main(int argc, char** argv){
 
-	//Initialize default compiler parameters
-	CompilerParams params;
-
 	//Get input file's name
 	if (argc < 2){
-		params.error("Requires .q-- file's name (no spaces allowed) as input.");
+		cout << ("Requires .q-- file's name (no spaces allowed) as input.") << endl;
 		return -1;
 	}
 	string filename = argv[1];
@@ -131,25 +130,28 @@ int main(int argc, char** argv){
     //read through file
 	ifstream file(filename.c_str());
 	if (!file.is_open()) {
-		cout << "Failed to open file" << endl;
+		cout << "Failed to open file '" << filename << "'"  << endl;
 		return -1;
 	}
 
 	std::string line;
-
+	size_t line_num = 0;
+	vector<string_idx> words;
+	vector<qmm_line> program;
 	while (getline(file, line)) {
 
 		line_num++;
 		qmm_line nextqmm;
-		qmm_line.lum = line_num;
+		nextqmm.lnum = line_num;
 
 		trim_whitespace(line); //Remove whitespace from line
 
 		// Find comment_spec occurance (find first occurance)
 		size_t idx = line.find("//");
 		if (idx != std::string::npos){
+
+			nextqmm.comment = line.substr(idx);
 			line = line.substr(0, idx);
-			qmm_line.comment = line.substr(idx);
 		}
 
 		if (line.length() == 0) continue; //Continue if blank
@@ -163,32 +165,95 @@ int main(int argc, char** argv){
 		}
 
 		// Read compiler directives
-		signed int dirs_end = words.size()-1;
-		for (signed int i = words.size() ; i >= 0 ; i--){
+		// signed int dirs_end = words.size()-1;
+		// for (signed int i = words.size()-1 ; i >= 0 ; i--){
+		//
+		// 	cout << i << endl;
+		//
+		// 	//Skip blank words
+		// 	if (words[i].str.length() < 1) continue;
+		//
+		// 	cout << "\t"<< i << endl;
+		//
+		// 	// Check for directive
+		// 	if (words[i].str[0] == '#'){
+		// 		compdir cd;
+		// 		cd.directive = words[i].str;
+		// 		if (i+1 < words.size()){
+		// 			cd.argument = words[i+1].str;
+		// 		}
+		// 		nextqmm.dirs.push_back(cd);
+		// 		dirs_end = i-1;
+		// 	}
+		// 	cout << "\t\t"<< i << endl;
+		// }
+
+		int dirs_end = words.size()-1;
+		for (size_t j = 0 ; j < words.size() ; j++){
 
 			//Skip blank words
-			if (words[i].str.length() < 1) continue;
+			if (words[j].str.length() < 1) continue;
 
 			// Check for directive
-			if (words[i].str[0] == '#'){
+			if (words[j].str[0] == '#'){
 				compdir cd;
-				cd.directive = words[i].str;
-				cd.argument = words[i+1].str;
-				qmm_line.dirs.push_back(cd);
-				dirs_end = i-1;
+				cd.directive = words[j].str;
+				if (j+1 < words.size()){
+					cd.argument = words[j+1].str;
+				}
+				nextqmm.dirs.push_back(cd);
+				dirs_end = j-1;
+				j++;
 			}
+
 		}
 
 		// Read instruction
 		if (dirs_end >= 0){
-			qmm_line.instruction = words[0].str;
-			for (size_t i = 1; i <= dirs_end ; i++){
-				qmm_line.data_bytes.push_back(gstd::fstoi(words[i].str));
+
+			nextqmm.instruction = words[0].str;
+			for (size_t i = 1; i <= dirs_end && i < words.size() ; i++){
+
+				try{
+					nextqmm.data_bytes.push_back(gstd::fstoi(words[i].str));
+				}catch(...){
+					cout << "Failed to convert " << words[i].str << " to a number" << endl;
+				}
+
 			}
 
 		}
+
+		// Add to program
+		program.push_back(nextqmm);
     }
 
+	//--------------------- Print Program --------------------------------------
+
+	for (size_t i = 0 ; i < program.size() ; i++){
+
+		// Print instruction and line number
+		cout << "[" << program[i].lnum << "] " << program[i].instruction << endl;
+
+		// Print data bytes
+		if (program[i].data_bytes.size() > 0) cout << "\t [";
+		for (size_t k = 0 ; k < program[i].data_bytes.size() ; k++){
+			if (k != 0){
+				cout << ", ";
+			}
+			cout << to_string(program[i].data_bytes[k]);
+		}
+		if (program[i].data_bytes.size() > 0) cout << "]" << endl;
+
+		// Print directives
+		for (size_t k = 0 ; k < program[i].dirs.size() ; k++){
+			cout << "\tD" << k << ": " << program[i].dirs[k].directive << ", " << program[i].dirs[k].argument << endl;
+		}
+
+		if (program[i].comment.length() > 0){
+			cout << "\tC: " << program[i].comment << endl;
+		}
+	}
 
 	return 0;
 }

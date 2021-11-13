@@ -10,3 +10,6 @@ isvpub: isvpub.cpp subatomic.hpp
 
 LutTypes.o: LutTypes.cpp
 	$(CC) -c LutTypes.cpp $(LIBS)
+
+qmm: qmm.cpp subatomic.hpp
+	$(CC) -o qmm qmm.cpp $(LIBS)
