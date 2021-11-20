@@ -1686,6 +1686,59 @@ bool InstructionSet::save_lut(std::string filename){
 
 }
 
+ bool processBPIR(std::vector<std::string> bpir, InstructionSet is, std::vector<std::string>& bpi, std::string& msg_out){
+
+	bpi.clear();
+
+	msg_out = "";
+
+	 // Scan over each line of BPIR
+	std::string line;
+	std::string datastr;
+	std::string bpi_line;
+	for (size_t l = 0 ; l < bpir.size() ; l++){
+
+		line = bpir[l];
+
+		// Remove comments
+		trim_end_comment(line, "//");
+
+		// Find data indicator (:)
+		size_t idx = line.find(":");
+		if (idx == std::string::npos){
+			msg_out = "Failed to find data indicator character on BPIR line " + to_string(l+1);
+			return false;
+		}
+
+		// Get data string
+		datastr = line.substr(idx+1);
+		bpi_line = line.substr(0, idx+1);
+		trim_whitespace(datastr);
+		if (datastr.length() < 1){
+			msg_out = "Missing data on BPIR line " + to_string(l+1);
+			return false;
+		}
+
+		// See if data string is a valid instruction name
+		if (is.ops.count(datastr)){
+			bpi_line = bpi_line + " " + to_string(is.ops[datastr].instruction_no);
+		}else{
+			try{
+				fstoi(datastr);
+				bpi_line = line; // If already formatted as raw data, just return original string
+			}catch(...){
+				msg_out = "Cannot recognize data on BPIR line " + to_string(l+1);
+				return false;
+			}
+		}
+
+		bpi.push_back(bpi_line);
+
+	}
+
+	return true;
+
+}
 
 
 #endif

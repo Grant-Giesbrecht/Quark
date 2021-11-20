@@ -293,7 +293,7 @@ int main(int argc, char** argv){
 				num_bytes = is.ops[program[pi].instruction].data_bits;
 			}else{
 				lgr.error("Failed to find instruction '" + program[pi].instruction + "' (Line "+to_string(program[pi].lnum)+")", true);
-				return -1;	
+				return -1;
 			}
 			// try{
 			//
@@ -404,6 +404,24 @@ int main(int argc, char** argv){
 	for (size_t i = 0 ; i < bpir.size() ; i++){
 
 		cout << bpir[i] << endl;
+
+	}
+
+	//------------------------- Create BPI from BPIR ---------------------------
+
+	vector<string> bpi;
+	string msg;
+	if (!processBPIR(bpir, is, bpi, msg)){
+		lgr.error(msg, true);
+		return -1;
+	}
+
+	//------------------------------- Print BPI --------------------------------
+
+	cout << "BPI Contents:" << endl;
+	for (size_t i = 0 ; i < bpi.size() ; i++){
+
+		cout << bpi[i] << endl;
 
 	}
 
