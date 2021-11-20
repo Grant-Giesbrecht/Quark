@@ -24,6 +24,7 @@ Created by G. Giesbrecht
 #include <map>
 #include <cmath>
 #include <ctgmath>
+#include "GLogger.hpp"
 
 #include "subatomic.hpp"
 
@@ -50,9 +51,12 @@ typedef struct{
 
 int main(int argc, char** argv){
 
+	GLogger lgr;
+	lgr.setLevel(LOGGER_MSG);
+
 	//Get input file's name
 	if (argc < 2){
-		cout << ("Requires .q-- file's name (no spaces allowed) as input.") << endl;
+		lgr.error("Requires .q-- file's name (no spaces allowed) as input.", true);
 		return -1;
 	}
 	string filename = argv[1];
@@ -62,6 +66,7 @@ int main(int argc, char** argv){
 	//---------------------- Read configuration file ---------------------------
 	map<string, string> settings;
 	if (!load_conf("quark.conf", settings)){
+		lgr.error("Failed to read configuration file", true);
 		return -1;
 	}
 	string isd_path = settings["isd_file_path"];
@@ -109,19 +114,19 @@ int main(int argc, char** argv){
 	//-------------------- Load current and last ISV version -------------------
 
 	// Create InstructionSet objects
-	InstructionSet is_new;
+	InstructionSet is;
 
 	// Read ISV files
 
 	// Read CW File
-	if (!is_new.load_cw(cw_path)){
-		cout << "Exiting" << endl;
+	if (!is.load_cw(cw_path)){
+		lgr.error("Failed to read CW File ("+cw_path+")", true);
 		return -1;
 	}
 
 	// Read ISD File
-	if (!is_new.load_isd(isd_path)){
-		cout << "Exiting" << endl;
+	if (!is.load_isd(isd_path)){
+		lgr.error("Failed to read ISD File ("+isd_path+")", true);
 		return -1;
 	}
 
@@ -130,7 +135,7 @@ int main(int argc, char** argv){
     //read through file
 	ifstream file(filename.c_str());
 	if (!file.is_open()) {
-		cout << "Failed to open file '" << filename << "'"  << endl;
+		lgr.error("Failed to read program source ("+filename+")", true);
 		return -1;
 	}
 
@@ -217,7 +222,8 @@ int main(int argc, char** argv){
 				try{
 					nextqmm.data_bytes.push_back(gstd::fstoi(words[i].str));
 				}catch(...){
-					cout << "Failed to convert " << words[i].str << " to a number" << endl;
+					lgr.error("Failed to convert "+words[i].str+" to a number.");
+					return -1;
 				}
 
 			}
@@ -253,6 +259,152 @@ int main(int argc, char** argv){
 		if (program[i].comment.length() > 0){
 			cout << "\tC: " << program[i].comment << endl;
 		}
+	}
+
+	//------------------ Convert Program vector to BPIR (string vector) --------
+
+	// List of addresses assigned by 'here'
+	map<string, size_t> here_directives;
+
+	// List of lines for BPIR file (Blinkenrechner Program Image - Readable)
+	vector<string> bpir;
+
+	// Scan over all program elements
+	string nl;
+	size_t lnum_bpir = 1;
+	for (size_t pi = 0 ; pi < program.size() ; pi++){
+
+		// Verify instruction is not blank
+		if (program[pi].instruction == ""){
+			lgr.warning("Case not handled for instruction-free lines (Line " +to_string(program[pi].lnum)+")", true);
+		}else{
+
+			// Add instruction to program
+			nl = to_string(lnum_bpir) + ": " + program[pi].instruction;
+			if (program[pi].comment.length() > 0){
+				nl = nl + " " + program[pi].comment;
+			}
+			bpir.push_back(nl);
+			lnum_bpir++;
+
+			// Check number of expected data bytes
+			int num_bytes;
+			if (is.ops.count(program[pi].instruction)){
+				num_bytes = is.ops[program[pi].instruction].data_bits;
+			}else{
+				lgr.error("Failed to find instruction '" + program[pi].instruction + "' (Line "+to_string(program[pi].lnum)+")", true);
+				return -1;	
+			}
+			// try{
+			//
+			// 	cout << program[pi].instruction << " " << is.ops[program[pi].instruction].data_bits << endl;
+			// }catch(...){
+			// 	lgr.error("Failed to find instruction '" + program[pi].instruction + "' (Line "+to_string(program[pi].lnum)+")", true);
+			// 	return -1;
+			// }
+
+			if (strcmp(program[pi].instruction.c_str(), "RAM_REGB") == 0){
+				cout << "\t" << num_bytes << " " << program[pi].data_bytes.size() << endl;
+			}
+
+			// Add data bytes to program
+			if (num_bytes == 1){ // If one data byte... (8 bit)
+				for (size_t k = 0 ; k < program[pi].data_bytes.size() ; k++){
+					nl = to_string(lnum_bpir) + ": " + to_string(program[pi].data_bytes[k]);
+					bpir.push_back(nl);
+					lnum_bpir++;
+				}
+			}else if(num_bytes == 2){ // If two data bytes (16 bit)
+
+				if (program[pi].data_bytes.size() >= 1){
+
+					uint16_t addr = program[pi].data_bytes[0];
+
+					uint16_t mask_byte0 = 255;
+					uint16_t mask_byte1 = 65280;
+
+					uint16_t byte0 = (addr & mask_byte0);
+					uint16_t byte1 = ((addr & mask_byte1) >> 8);
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte0);
+					bpir.push_back(nl);
+					lnum_bpir++;
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte1);
+					bpir.push_back(nl);
+					lnum_bpir++;
+
+				}else if(program[pi].dirs.size() < 1){
+					lgr.error("Line " + to_string(program[pi].lnum) + " is missing a data byte", true);
+					return -1;
+				}
+
+
+			}else if(num_bytes != 0){
+				lgr.warning("Cannot handle " + to_string(num_bytes)+ "-byte data in current configuration (Line "+to_string(program[pi].lnum)+")", true);
+				return -1;
+			}
+
+			// Process directives
+			for (size_t k = 0 ; k < program[pi].dirs.size() ; k++){
+				if (program[pi].dirs[k].directive.compare("#HERE") == 0){
+
+					// Check if key exists
+					if (here_directives.count(program[pi].dirs[k].argument)){
+						lgr.warning("Key already exists. Overwriting", true);
+					}
+
+					// Save line number
+					here_directives[program[pi].dirs[k].argument] = lnum_bpir-1;
+
+				}else if(program[pi].dirs[k].directive.compare("#DEREF") == 0){
+					// Check if key exists...
+					if (here_directives.count(program[pi].dirs[k].argument)){
+
+						// Verify number of data bytes
+						if (is.ops[program[pi].instruction].data_bits != 2){
+							lgr.error("Cannot dereference address for instrucion taking other than 2 data bytes", true);
+							return -1;
+						}
+
+						uint16_t addr;
+						try{
+							addr = here_directives[program[pi].dirs[k].argument];
+						}catch(...){
+							lgr.error("Failed to dereference abstract address '" + program[pi].dirs[k].argument +"' (Line " + to_string(program[pi].lnum) + "). Perhaps it is defined on a later line?", true);
+							return -1;
+						}
+
+						uint16_t mask_byte0 = 255;
+						uint16_t mask_byte1 = 65280;
+
+						uint16_t byte0 = (addr & mask_byte0);
+						uint16_t byte1 = ((addr & mask_byte1) >> 8);
+
+						nl = to_string(lnum_bpir) + ": " + to_string(byte0);
+						bpir.push_back(nl);
+						lnum_bpir++;
+
+						nl = to_string(lnum_bpir) + ": " + to_string(byte1);
+						bpir.push_back(nl);
+						lnum_bpir++;
+					}else{
+						lgr.error("Failed to dereference key '" + program[pi].dirs[k].argument + "'", true);
+						return -1;
+					}
+				}
+			}
+		}
+
+	}
+
+	//------------------------------- Print BPIR -------------------------------
+
+	cout << "BPIR Contents:" << endl;
+	for (size_t i = 0 ; i < bpir.size() ; i++){
+
+		cout << bpir[i] << endl;
+
 	}
 
 	return 0;

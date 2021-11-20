@@ -19,7 +19,8 @@ G Giesbrecht
 #include <ktable.hpp>
 
 //CXCOMPILE g++ quark_comp.cpp -o quark_comp -lgstd -std=c++11 -lktable
-//CXCOMPILE ./quark_comp Source\ Files/dev.qrk -v -info
+//Skip CXCOMPILE ./quark_comp Source\ Files/dev.qrk -v -info
+//CXCOMPILE ./quark_comp BrPgm3.qrk -v -info
 //CXGENRUN FALSE
 //CXPRINTCOM TRUE
 

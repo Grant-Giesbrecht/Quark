@@ -1,0 +1,121 @@
+// BrPgm-3
+
+// Initialize SysReg with 0
+RAM_REGA 0
+RAM_REGB 0
+ADD
+REGC_SYSREG
+
+// Prepare inversion
+RAM0_CHA 255
+
+// Start turning bits on
+#HERE LOOP_START
+
+SYSREG_REGA // Read system register
+RAM_REGB b00000001 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b00000100 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b00000010 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b00001000 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b00100000 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b00010000 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b10000000 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+SYSREG_REGA // Read system register
+RAM_REGB b01000000 // Load mask
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+// Start turning bits off
+
+RAM_REGB b00000001 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b00000100 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b00000010 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b00001000 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b00100000 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b00010000 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b10000000 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+RAM_REGB b01000000 // Load mask
+CHA_REGA //Load 0xFF
+BITXOR // Invert mask
+REGC_REGB // Save inverted mask to register B
+SYSREG_REGA // Read system register
+BITOR // Apply mask
+REGC_SYSREG // Update system register
+
+JUMP @LOOP_START

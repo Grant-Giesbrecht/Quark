@@ -51,13 +51,13 @@
 #REPL FETCH_
 4: ERR_SET_BADINSTRUC //This line should never run. Can replace this instruction with something helpful.
 
-* ADD 2 0
+* ADD 1 0
 ? Adds the numbers in REGA and REGB and stores the result in REGC
 #PROCESSOR ALU
 #REPL FETCH_
 4: _ADD_EN REGC_WR PHI_RESET
 
-* PMEM_REGA 1 1
+* PMEM_REGA 2 1
 ? Transfers one byte of data that is stored with the instruction to REGA
 #REPL FETCH_
 #REPL GET_8b_DATA_end_ REGA_WR
@@ -81,89 +81,14 @@
 10: _REG_AA_OE SR0_MAR_WR
 11: _REGC_OE  RAMS0_WR PHI_RESET
 
-* RAM0_REGA 6 2
-? Transfers data at RAM w/ specified 16 bit address to register A
+* RAM0_REGC 6 2
+? Transfers data at RAM w/ specified 16 bit address to register C
 #REPL FETCH_
 #REPL GET_16b_ADDR_
 10: _REG_AA_OE SR0_MAR_WR
-11: _RAMS0_OE REGA_WR PHI_RESET
+11: _RAMS0_OE REGC_WR PHI_RESET
 
 * REGC_CHA 7 0
 ? Transfers contents of register A to cache byte A
 #REPL FETCH_
 4: _REGC_OE CACHE_A_WR PHI_RESET
-
-* SYSREG_REGA 8 0
-? Transfers contents of the system hardware register to register A
-#REPL FETCH_
-4: _SYSREG_OE REGA_WR PHI_RESET
-
-* REGC_SYSREG 9 0
-? Writes register C to the system hardware register
-#REPL FETCH_
-4: _REGC_OE SYSREG_WR PHI_RESET
-
-* BITAND 10 0
-? Bitwise AND
-#PROCESSOR ALU
-#REPL FETCH_
-4: _BITAND_EN REGC_WR PHI_RESET
-
-* RAM0_CHA 11 2
-? Transfers data at RAM w/ specified 16 bit address to cache A
-#REPL FETCH_
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-11: _RAMS0_OE CACHE_A_WR PHI_RESET
-
-* BITOR 12 0
-? Bitwise OR
-#PROCESSOR ALU
-#REPL FETCH_
-4: _BITOR_EN REGC_WR PHI_RESET
-
-* CHA_REGA 13 0
-? Moves contents of cache A to register A
-#REPL FETCH_
-4: _CACHE_A_OE REGA_WR PHI_RESET
-
-* BITXOR 14 0
-? Bitwise XOR
-#PROCESSOR ALU
-#REPL FETCH_
-4: _BITXOR_EN REGC_WR PHI_RESET
-
-* REGC_REGB 15 0
-? Move REGC to REGB
-4: _REGC_OE REGB_WR PHI_RESET
-
-* LBS 16 0
-? Local bike shop, er wait no Left bit shift
-#PROCESSOR ALU
-#REPL FETCH_
-4: _LSHIFT_EN REGC_WR PHI_RESET
-
-* JUMP 17 2
-? Jump to a specific line
-#REPL FETCH_
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE _WRITE_PC PHI_RESET
-
-* RBS 18 0
-? Right bit shift
-#PROCESSOR ALU
-#REPL FETCH_
-4: _RSHIFT_EN REGC_WR PHI_RESET
-
-* RAM0_REGB 19 2
-? Transfers data at RAM w/ specified 16 bit address to register B
-#REPL FETCH_
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-11: _RAMS0_OE REGB_WR PHI_RESET
-
-* SUB 20 0
-? Subtract
-#PROCESSOR ALU
-#REPL FETCH_
-4: INV_B CARRY_IN _ADD_EN REGC_WR PHI_RESET
