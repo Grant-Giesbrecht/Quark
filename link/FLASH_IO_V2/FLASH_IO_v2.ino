@@ -20,7 +20,7 @@ unsigned int write_time_delay = 1000; //in microseconds
 unsigned int read_time_delay = 1000; //in microseconds, time for data to be correct and stable on data bus after operation triggered
 unsigned int clear_pause_time = 1000000; //in microseconds, time for clear pause pin to be active
 
-bool erase_before_write = false;
+bool erase_before_write = true;
 
 // FLash pins - OUTPUT
 #define PIN_LD_ADDR_S0 31
@@ -382,6 +382,7 @@ bool process_input(){
     String ds = "";
     is_zero = true;
     for (size_t i = last_idx+1 ;i < load_idx-1 ; i++){
+		if (buffer[i] == ' ') continue;
         if (buffer[i] == '\r' || buffer[i] == '\n'){
             ds = ds + "^";
         }else{
