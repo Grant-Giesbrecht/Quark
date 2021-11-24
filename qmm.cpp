@@ -313,7 +313,7 @@ int main(int argc, char** argv){
 
 	// Scan over all program elements
 	string nl;
-	size_t lnum_bpir = 1;
+	size_t lnum_bpir = 0;
 	for (size_t pi = 0 ; pi < program.size() ; pi++){
 
 		// Verify instruction is not blank
