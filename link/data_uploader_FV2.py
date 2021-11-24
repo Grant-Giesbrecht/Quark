@@ -1,7 +1,7 @@
 import pyvisa as pv
 import time
 
-filename = "../../Quark-Programs/BrPgm-2/BrPgm2.mcb"
+filename = "../../Quark-Programs/BrPgm-3/Build/BrPgm3.bpi"
 lines_per_batch = 512
 
 t_upload = []
