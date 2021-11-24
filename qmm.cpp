@@ -61,7 +61,47 @@ int main(int argc, char** argv){
 	}
 	string filename = argv[1];
 
+	// Read output flags
+	string flag;
+	string outfile = "out.bpi";
+	string outfile_r = "out.bpir";
+	bool save_bpir = false;
+	bool save_bpi = true;
 	bool verbose = false;
+	for (int argi = 2 ; argi < argc ; argi++){
+
+		// Get flag
+		flag = argv[argi];
+
+		// Get value
+		if (strcmp(flag.c_str(), "-o") == 0){
+			if (argi+1 >= argc){
+				lgr.warning("Incorrect number of args for flag: " + flag, true);
+				break;
+			}
+			outfile = argv[argi+1];
+			lgr.msg("Outfile: " + outfile, true);
+			argi++;
+		}else if (strcmp(flag.c_str(), "-or") == 0){
+			if (argi+1 >= argc){
+				lgr.warning("Incorrect number of args for flag: " + flag, true);
+				break;
+			}
+			outfile_r = argv[argi+1];
+			save_bpir = true;
+			lgr.msg("BPIR Outfile: " + outfile_r, true);
+			argi++;
+		}else if (strcmp(flag.c_str(), "-v") == 0){
+			verbose = true;
+		}else if (strcmp(flag.c_str(), "-dummy") == 0){
+			save_bpir = false;
+			save_bpi = false;
+		}else{
+			lgr.warning("Unrecognized flag: " + flag, true);
+		}
+	}
+
+
 
 	//---------------------- Read configuration file ---------------------------
 	map<string, string> settings;
@@ -236,28 +276,30 @@ int main(int argc, char** argv){
 
 	//--------------------- Print Program --------------------------------------
 
-	for (size_t i = 0 ; i < program.size() ; i++){
+	if (verbose){
+		for (size_t i = 0 ; i < program.size() ; i++){
 
-		// Print instruction and line number
-		cout << "[" << program[i].lnum << "] " << program[i].instruction << endl;
+			// Print instruction and line number
+			cout << "[" << program[i].lnum << "] " << program[i].instruction << endl;
 
-		// Print data bytes
-		if (program[i].data_bytes.size() > 0) cout << "\t [";
-		for (size_t k = 0 ; k < program[i].data_bytes.size() ; k++){
-			if (k != 0){
-				cout << ", ";
+			// Print data bytes
+			if (program[i].data_bytes.size() > 0) cout << "\t [";
+			for (size_t k = 0 ; k < program[i].data_bytes.size() ; k++){
+				if (k != 0){
+					cout << ", ";
+				}
+				cout << to_string(program[i].data_bytes[k]);
 			}
-			cout << to_string(program[i].data_bytes[k]);
-		}
-		if (program[i].data_bytes.size() > 0) cout << "]" << endl;
+			if (program[i].data_bytes.size() > 0) cout << "]" << endl;
 
-		// Print directives
-		for (size_t k = 0 ; k < program[i].dirs.size() ; k++){
-			cout << "\tD" << k << ": " << program[i].dirs[k].directive << ", " << program[i].dirs[k].argument << endl;
-		}
+			// Print directives
+			for (size_t k = 0 ; k < program[i].dirs.size() ; k++){
+				cout << "\tD" << k << ": " << program[i].dirs[k].directive << ", " << program[i].dirs[k].argument << endl;
+			}
 
-		if (program[i].comment.length() > 0){
-			cout << "\tC: " << program[i].comment << endl;
+			if (program[i].comment.length() > 0){
+				cout << "\tC: " << program[i].comment << endl;
+			}
 		}
 	}
 
@@ -400,11 +442,13 @@ int main(int argc, char** argv){
 
 	//------------------------------- Print BPIR -------------------------------
 
-	cout << "BPIR Contents:" << endl;
-	for (size_t i = 0 ; i < bpir.size() ; i++){
+	if (verbose){
+		cout << "BPIR Contents:" << endl;
+		for (size_t i = 0 ; i < bpir.size() ; i++){
 
-		cout << bpir[i] << endl;
+			cout << bpir[i] << endl;
 
+		}
 	}
 
 	//------------------------- Create BPI from BPIR ---------------------------
@@ -418,12 +462,35 @@ int main(int argc, char** argv){
 
 	//------------------------------- Print BPI --------------------------------
 
-	cout << "BPI Contents:" << endl;
-	for (size_t i = 0 ; i < bpi.size() ; i++){
+	if (verbose){
+		cout << "BPI Contents:" << endl;
+		for (size_t i = 0 ; i < bpi.size() ; i++){
 
-		cout << bpi[i] << endl;
+			cout << bpi[i] << endl;
 
+		}
 	}
+
+	//------------------------------- Save files -------------------------------
+
+	if (save_bpi){
+		ofstream bpi_out;
+		bpi_out.open (outfile);
+		for (size_t pl = 0 ; pl < bpi.size() ; pl++){
+			bpi_out << bpi[pl] << "\n";
+		}
+		bpi_out.close();
+	}
+
+	if (save_bpir){
+		ofstream bpir_out;
+		bpir_out.open (outfile_r);
+		for (size_t pl = 0 ; pl < bpir.size() ; pl++){
+			bpir_out << bpir[pl] << "\n";
+		}
+		bpir_out.close();
+	}
+
 
 	return 0;
 }
