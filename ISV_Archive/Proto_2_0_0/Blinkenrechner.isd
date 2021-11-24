@@ -1,0 +1,169 @@
+#ARCH Matterhorn821
+#SERIES Proto
+
+// Fetches the instruction. Should appear as the first two phases of every
+// instruction.
+#DEF FETCH_
+0: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2S0_CPU_WR_EN
+1: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+2: CU_PMEM_OE INST_REG_WR PC_CLK
+3:
+#END
+
+
+// Fetches two byes of data behind the instruction and places them in the
+// address assembly registers (ie. AA0 and AA8). Used for accessing an address
+// stored with the instruction.
+// #DEF GET_16b_ADDR_
+// 3: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+// 4: CU_PMEM_OE REG_AA0_WR PC_CLK
+// 5: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+// 6: CU_PMEM_OE REG_AA8_WR PC_CLK
+// #END
+
+// Fetches one byte of data behind the instruction and is intended to place it in
+// a register. To place it in a register, the register's write control line must
+// be passed as the sole argument.
+// #DEF GET_8b_DATA_ (1)
+// 3: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+// 4: CU_PMEM_OE PC_CLK @
+// #END
+
+// Variation of `GET_8b_DATA_` that also resets the PHI counter, and thus can
+// appear as the last instruction
+#DEF GET_8b_DATA_end_ (1)
+4: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR
+5: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+6: CU_PMEM_OE PC_CLK PHI_RESET @
+#END
+
+#DEF GET_16b_ADDR_
+4: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR
+5: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+6: CU_PMEM_OE PC_CLK REG_AA0_WR
+7: _PC_OE DT2S0_ADDR_WR SR0_MAR_WR
+8: DT2SN_OPCD0=OFF DT2SN_OPCD1=ON _PMEM_TRIG
+9: CU_PMEM_OE PC_CLK REG_AA8_WR
+#END
+
+* VOID 0 0
+? Will be run as the first instruction, no matter what! Instruction register starts at 0
+#REPL FETCH_
+4: ERR_SET_BADINSTRUC //This line should never run. Can replace this instruction with something helpful.
+
+* ADD 2 0
+? Adds the numbers in REGA and REGB and stores the result in REGC
+#PROCESSOR ALU
+#REPL FETCH_
+4: _ADD_EN REGC_WR PHI_RESET
+
+* PMEM_REGA 1 1
+? Transfers one byte of data that is stored with the instruction to REGA
+#REPL FETCH_
+#REPL GET_8b_DATA_end_ REGA_WR
+
+//TODO: This instruction number is wrong!
+* PMEM_REGB 3 1
+? Transfers one byte of data that is stored with the instruction to REGB
+#REPL FETCH_
+#REPL GET_8b_DATA_end_ REGB_WR
+
+//TODO: Add HCF
+* HCF 4 0
+? HALT, CATCH FIRE!
+#REPL FETCH_
+4: _HCF_SET=ON
+
+* REGC_RAM0 5 2
+? Transfers contents of REGC to RAM at 16 bit address specified in argument
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _REGC_OE  RAMS0_WR PHI_RESET
+
+* RAM0_REGA 6 2
+? Transfers data at RAM w/ specified 16 bit address to register A
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _RAMS0_OE REGA_WR PHI_RESET
+
+* REGC_CHA 7 0
+? Transfers contents of register A to cache byte A
+#REPL FETCH_
+4: _REGC_OE CACHE_A_WR PHI_RESET
+
+* SYSREG_REGA 8 0
+? Transfers contents of the system hardware register to register A
+#REPL FETCH_
+4: _SYSREG_OE REGA_WR PHI_RESET
+
+* REGC_SYSREG 9 0
+? Writes register C to the system hardware register
+#REPL FETCH_
+4: _REGC_OE SYSREG_WR PHI_RESET
+
+* BITAND 10 0
+? Bitwise AND
+#PROCESSOR ALU
+#REPL FETCH_
+4: _BITAND_EN REGC_WR PHI_RESET
+
+* RAM0_CHA 11 2
+? Transfers data at RAM w/ specified 16 bit address to cache A
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _RAMS0_OE CACHE_A_WR PHI_RESET
+
+* BITOR 12 0
+? Bitwise OR
+#PROCESSOR ALU
+#REPL FETCH_
+4: _BITOR_EN REGC_WR PHI_RESET
+
+* CHA_REGA 13 0
+? Moves contents of cache A to register A
+#REPL FETCH_
+4: _CACHE_A_OE REGA_WR PHI_RESET
+
+* BITXOR 14 0
+? Bitwise XOR
+#PROCESSOR ALU
+#REPL FETCH_
+4: _BITXOR_EN REGC_WR PHI_RESET
+
+* REGC_REGB 15 0
+? Move REGC to REGB
+4: _REGC_OE REGB_WR PHI_RESET
+
+* LBS 16 0
+? Local bike shop, er wait no Left bit shift
+#PROCESSOR ALU
+#REPL FETCH_
+4: _LSHIFT_EN REGC_WR PHI_RESET
+
+* JUMP 17 2
+? Jump to a specific line
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE _WRITE_PC PHI_RESET
+
+* RBS 18 0
+? Right bit shift
+#PROCESSOR ALU
+#REPL FETCH_
+4: _RSHIFT_EN REGC_WR PHI_RESET
+
+* RAM0_REGB 19 2
+? Transfers data at RAM w/ specified 16 bit address to register B
+#REPL FETCH_
+#REPL GET_16b_ADDR_
+10: _REG_AA_OE SR0_MAR_WR
+11: _RAMS0_OE REGB_WR PHI_RESET
+
+* SUB 20 0
+? Subtract
+#PROCESSOR ALU
+#REPL FETCH_
+4: INV_B CARRY_IN _ADD_EN REGC_WR PHI_RESET
