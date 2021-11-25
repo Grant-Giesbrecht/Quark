@@ -29,6 +29,10 @@ Created by G. Giesbrecht
 
 int main(int argc, char** argv){
 
+	bool opt_print_cw = true;
+	bool opt_print_isd = true;
+	bool opt_print_intermediates = false;
+
 	InstructionSet is;
 
 	// std::vector<control_line> controls;
@@ -52,8 +56,9 @@ int main(int argc, char** argv){
 	}
 
 	// Print control wiring
-	is.print_cw();
-
+	if (opt_print_cw){
+		is.print_cw();
+	}
 
 	// Get ISD filename
 	std::string isd_filename;
@@ -71,16 +76,22 @@ int main(int argc, char** argv){
 	}
 
 	// Print Instruction Set Description
-	is.print_isd();
+	if (opt_print_intermediates){
+		is.print_isd();
+	}
 
 	// Print summary
-	is.print_operation_summary();
+	if (opt_print_isd){
+		is.print_operation_summary(60);
+	}
 
 	// Generate LUT
 	is.generate_LUT(false);
 
 	// Display lookup table
-	is.print_lut();
+	if (opt_print_intermediates){
+		is.print_lut();
+	}
 
 	// Get Look-Up Table Filename
 	string lut_filename = "./ISVs/blinkenrechner.lut";
