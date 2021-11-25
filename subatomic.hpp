@@ -98,7 +98,7 @@ public:
 
 	void print_cw();
 	void print_isd();
-	void print_operation_summary(size_t pin_cols = 4, size_t desc_len = 25);
+	void print_operation_summary(size_t desc_len = 25);
 	void print_lut();
 
 	bool hasInstruction(size_t inst_no);
@@ -1377,7 +1377,7 @@ void InstructionSet::print_isd(){
 }
 
 
-void InstructionSet::print_operation_summary(size_t pin_cols, size_t desc_len){
+void InstructionSet::print_operation_summary(size_t desc_len){
 
 	map<string, operation>::iterator it;
 	map<int, map<int, map<int, bool> > >::iterator phase_it;
