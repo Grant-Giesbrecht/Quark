@@ -7,7 +7,7 @@ lines_per_batch = 512
 t_upload = []
 t_write = []
 
-port = "FRONT_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
+port = "BACK_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
 
 chip_erase = True
 

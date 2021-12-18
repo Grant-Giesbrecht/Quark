@@ -1,4 +1,77 @@
-// Quark language
+// OPERATORS
+//
+// Standard Operators (OP)
+//		: Address, value operator (direct write operator)
+//
+//	Subroutine Operators (Call a subroutine specified by OSR+) (SOP)
+//		+
+//		-
+//		*
+//		/
+//		^
+//		%
+//		|
+//		&
+
+// KEYWORDS
+//
+// Standard Keywords:
+// 		subroutine
+//		macro
+//		expand
+//		true
+//		false
+//
+//	Option Keywords: Keywords pertaining to system hardware
+//		FLASH0
+//		FLASH1
+//		RAM0
+//		zero
+//		nzero
+//		carry
+//		ncarry
+//
+// Type Keywords:
+//		int		(int8)
+//		float	(float8)
+//		addr	(addr8)
+//		bool
+//		float32
+//		addr32
+//		int32
+//		type8
+//		type16
+//		type32
+//		(arg)
+
+
+// Compiler Directives:
+//		#ARCH <str>	Specify target architecture
+//		#SERIES <#>.<#>.<#>	Specify target ISV series
+//		#ISV <#>.<#>.<#> Specify target ISV minimum version
+//		#ISV_EXACT <#>.<#>.<#> Specify target ISV exact match requirement
+//		#PMEM <str>	Default program memory location
+//		#TRUEVAL <#> Specify mapping of 'true' keyword
+//		#FALSEVAL <#> Specify mapping of 'false' keyword
+//		#INCLUDE <str> Copy and paste file contents to top of file
+//		#SUBOPERATOR <str-operator> <str-sub-name> Tell compiler what subroutine to use for the specified operator
+
+// Limitations:
+//		No strings so far
+//		No lists so far
+
+// Symbols:
+//		=	Either AML initialization or PMEM -> RAM0
+//		;	Line end
+//		()	Argument list
+//		#	Compiler directive indicator
+//		// 	Comment identifier
+//		{}
+//		@	Manual declaration symbol
+
+
+
+ Quark language
 //
 // Keywords:
 // 		subroutine
@@ -6,12 +79,6 @@
 //		expand
 //		true
 //		false
-//
-//		while
-//		if
-//		else
-//
-//
 //
 //	Option Keywords:
 //		FLASH0
@@ -37,6 +104,7 @@
 //		()	Argument list
 //		#	Compiler directive indicator
 //		// 	Comment identifier
+//		{}
 //
 // Compiler Directives:
 //		#ARCH	Specify target architecture
@@ -47,18 +115,9 @@
 //		#TRUEVAL Specify mapping of 'true' keyword
 //		#FALSEVAL Specify mapping of 'false' keyword
 //
-// Operators
-//		: Address, value operator (direct write operator)
-//
-//	Subroutine Operators (Call a subroutine specified by OSR+)
-//		+
-//		-
-//		*
-//		/
-//		^
-//		%
-//		|
-//		&
+
+
+
 //
 //
 // Data Formats:
@@ -82,6 +141,8 @@
 int f = 1e3;		//Declare 8 bit AML with 'int' or 'addr'. Both do same thing
 int C = 1e-12;
 int pi = 3.1415926535;
+
+int x = 12 @ &x = 4;
 
 int val_1 = 1;
 int val_2 = 2;
@@ -123,14 +184,14 @@ REGC_DISPA
 // 	RPAUS 0 //Reprogrammable light off
 // }
 
-IFZERO CLAUSE_IF
+IFZERO CLAUSE_IF	#HERE start_if
 //else stuff
 SUB
 JUMP END_IF
 #HERE CLAUSE_IF
 //if stuff
 ADD
-#HERE END_IF
+#NEXT END_IF
 //
 // IFCARRY{
 // 	RPLAN 1 //Reprogrammable light on
