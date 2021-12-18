@@ -13,6 +13,7 @@
 #include <ctgmath>
 #include <filesystem>
 #include <gcolors.hpp>
+#include <cctype>
 
 #include <GLogger.hpp>
 
@@ -1738,6 +1739,42 @@ bool InstructionSet::save_lut(std::string filename){
 
 	return true;
 
+}
+
+/*
+Checks if the input is a valid string literal, either as a decimal, binary or
+hexadecimal number.
+*/
+bool isNumeric(std::string x){
+
+	return isbin(x) || ishex(x) || isdec(x);
+
+}
+
+/*
+Checks if the input string is a valid instruction in the instruction set 'is'.
+*/
+bool isInstruction(std::string x, InstructionSet is){
+	return is.ops.count(x) > 0;
+}
+
+/*
+Checks if the input string is a valid identifier:
+	Obeys:
+		1. All characeters are alphanumeric or underscore
+		2. First character is not a digit
+*/
+bool isIdentifier(std::string x){
+
+	// Check first letter
+	if (!(isalpha(x[0]) || x[0] == '_')) return false;
+
+	// Check all other characters in string
+	for ( int i = 1 ; i < x.length() ; i++){
+		if (!(isalnum(x[i]) || x[i] == '_')) return false;
+	}
+
+	return true;
 }
 
 
