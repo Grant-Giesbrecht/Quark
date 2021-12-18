@@ -1,0 +1,16 @@
+#ARCH Matterhorn
+#ISV 0.0.0
+
+int x = 7 @ &x = 1400;
+int y = 9 @ &y = 1401;
+
+PMEM_REGA 1400;
+PMEM_REGB 1401;
+ADD;
+REGC_RAM 1400;
+
+if (zero){
+	PMEM_CHA 1402;
+}else{
+	PMEM_CHB 1403;
+}
