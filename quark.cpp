@@ -195,7 +195,9 @@ int main(int argc, char** argv){
 	CompilerState cs(is, log);
 	cs.log = log;
 
-	if (!qparser(token_list, is, cs, log)){
+	vector<Statement> tree;
+
+	if (!qparser(token_list, is, cs, tree, log)){
 		cout << "Parser Returned with Errors:" << endl;
 		cout << log.all() << endl;
 		return -1;
@@ -203,6 +205,16 @@ int main(int argc, char** argv){
 
 	cout << "Lexer and Parser returned with no errors." << endl;
 	cout << log.all() << endl;
+
+	cout << "Tree size: " << tree.size() << endl;
+
+	// Run through tree and execute each statement
+	for (size_t i = 0 ; i < tree.size() ; i++){
+		tree[i].exec(cs, log);
+	}
+
+	cout << "BPIR: " << endl;
+	cout << cs.str() << endl;
 
 	return 0;
 }

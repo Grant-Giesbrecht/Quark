@@ -144,6 +144,8 @@ public:
 	void add(std::string data);
 	void add(std::string data, size_t lnum);
 
+	std::string str();
+
 private:
 	static const int mask_compiler_error = 0b00000001;
 	static const int mask_data_error     = 0b00000010;
@@ -198,28 +200,77 @@ void CompilerState::add(std::string data, size_t lnum){
 	}
 }
 
+std::string CompilerState::str(){
+
+	std::string s = "";
+
+	for (size_t i = 0 ; i < bpir.size() ; i++){
+		s = s + to_string(bpir[i].idx) + ":" + bpir[i].str;
+		if (bpir[i].id.length() > 0){
+			s = s + " (id: " + bpir[i].id + ")";
+		}
+		s = s + "\n";
+	}
+
+	return s;
+}
+
+//============================= STATEMENT BASE =================================
+
+class Statement{
+public:
+	Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx);
+
+	std::vector<qtoken> src;
+
+	virtual bool exec(CompilerState& cs, GLogger& log);
+};
+
+Statement::Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx){
+
+	vector<qtoken> subvec(tokens.begin() + start_idx, tokens.begin() + end_idx);
+	src = subvec;
+
+}
+
+bool Statement::exec(CompilerState& cs, GLogger& log){
+	log.warning("`exec()` called virtual function!");
+
+	cout << "Error" << endl;
+
+	return false;
+}
+
 //============================== MACHINE CODE STATEMENT ========================
 
-class MachineCodeStatement{
+class MachineCodeStatement : public Statement{
 
 public:
 
-	MachineCodeStatement();
+	MachineCodeStatement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx);
 
 	qtoken instruction;
 	std::vector<qtoken> data_bytes;
 
-	bool exec(CompilerState& cs, GLogger& log);
+	bool exec(CompilerState& cs, GLogger& log) override;
 
 };
 
-MachineCodeStatement::MachineCodeStatement(){
-	// Do Nothing
+MachineCodeStatement::MachineCodeStatement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx) : Statement(tokens, start_idx, end_idx){
+
+	// Save instruction token
+	instruction = src[0];
+
+	// Save data bit tokens
+	vector<qtoken> subvec(tokens.begin() + start_idx, tokens.begin() + end_idx);
+	data_bytes = subvec;
 }
 
-bool MachineCodeStatement::exec(CompilerState& cs, GLogger& log){
+bool MachineCodeStatement::exec(CompilerState& cs, GLogger& log) {
 
 	bool state = true;
+
+	cout << "X" << endl;
 
 	// First element of statement is machine code instruction
 	cs.add(instruction.str);

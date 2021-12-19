@@ -25,7 +25,9 @@ using namespace gstd;
 Accepts a plain text input, performs lexical analysis and returns a list of
 tokens.
 */
-bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, GLogger& log ){
+bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector<Statement>& tree, GLogger& log ){
+
+	tree.clear();
 
 	bool parse_status = true;
 
@@ -136,6 +138,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, GLogge
 				k++;
 			}
 
+			// Create class
+			MachineCodeStatement obj(tokens, i, k);
+			tree.push_back(obj);
+
 			i = k+1;
 		}else if (tokens[i].type == id && i < tokens.size()-1 && tokens[i+1].type == op && tokens[i+1].str == "="){ // Check if is a Reassignment Statement
 			log.info(" Statement, line: " + to_string(tokens[i].lnum));
@@ -192,7 +198,6 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, GLogge
 
 				i = k+1;
 			}
-			cout << k << " " << l << " " << m << endl;
 		}else if (tokens[i].type == key && tokens[i].str == "while"){
 			log.info("While Statement, line: " + to_string(tokens[i].lnum));
 
