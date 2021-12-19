@@ -59,6 +59,7 @@
 // Limitations:
 //		No strings so far
 //		No lists so far
+// 		Single-Use RAM Allocation
 
 // Symbols:
 //		=	Either AML initialization or PMEM -> RAM0

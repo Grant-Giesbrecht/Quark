@@ -88,6 +88,28 @@ typedef struct{
 	map<std::string, isd_repl_block> repl;
 }isd_internal;
 
+/*
+Represents a line in a BPIR with abstracted: variables ('id' will be replaced
+with a literal once the variable is assigned a RAM address or the subroutine is
+assigned a PMEM address or the jump location is assigned a PMEM address) and
+aliases (ie. the alias name is used to jump to this location. ie. the alias here
+would be in the 'id' field of other 'abs_line' objects.).
+*/
+typedef struct{
+	std::string str;
+	size_t idx;
+	std::string id;
+	std::string alias;
+}abs_line;
+
+/*
+Represents a span in memory, ie. a series of consecutive flash or RAM addresses
+*/
+typedef struct{
+	size_t addr;
+	size_t len;
+}span_t;
+
 class InstructionSet{
 
 public:

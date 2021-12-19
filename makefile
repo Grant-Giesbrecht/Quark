@@ -14,5 +14,8 @@ LutTypes.o: LutTypes.cpp
 qmm: qmm.cpp subatomic.hpp
 	$(CC) -o qmm qmm.cpp $(LIBS)
 
-qlexer: quarklexer.cpp subatomic.hpp quark_types.hpp
-	$(CC) -o qlexer quarklexer.cpp $(LIBS)
+# qlexer: quarklexer.cpp subatomic.hpp quark_types.hpp
+# 	$(CC) -o qlexer quarklexer.cpp $(LIBS)
+
+quark: quarklexer.hpp quarkparser.hpp subatomic.hpp quark_types.hpp
+	$(CC) -o quark quark.cpp $(LIBS)

@@ -1,6 +1,5 @@
-//CXCOMPILE make qlexer
-//CXCOMPILE ./qlexer quark_test1.qrk
-//CXGENRUN FALSE
+#ifndef QUARKLEXER_HPP
+#define QUARKLEXER_HPP
 
 #include <iostream>
 #include <string>
@@ -109,7 +108,7 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 	sep_list.push_back("}");
 	sep_list.push_back("@");
 
-	//*********************
+	//******************* Scan over Program, Break into Tokens *****************
 
 	qtoken cmt_tok;
 	string line;
@@ -217,7 +216,7 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 				tokens.push_back(nt);
 			}else if(isInstruction(word, is)){
 				qtoken nt;
-				nt.type = TokenType::sep;
+				nt.type = TokenType::ins;
 				nt.str = word;
 				nt.lnum = txt[i].idx;
 				tokens.push_back(nt);
@@ -247,171 +246,4 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 	return lex_status;
 }
 
-
-int main(int argc, char** argv){
-
-	bool show_tokens = true;
-
-	GLogger lgr;
-	lgr.setLevel(LOGGER_MSG);
-
-	//Get input file's name
-	if (argc < 2){
-		lgr.error("Requires .qrk file's name (no spaces allowed) as input.", true);
-		return -1;
-	}
-	string filename = argv[1];
-
-	// Read output flags
-	string flag;
-	string outfile = "out.bpi";
-	string outfile_r = "out.bpir";
-	bool save_bpir = false;
-	bool save_bpi = true;
-	bool verbose = false;
-	for (int argi = 2 ; argi < argc ; argi++){
-
-		// Get flag
-		flag = argv[argi];
-
-		// Get value
-		if (strcmp(flag.c_str(), "-o") == 0){
-			if (argi+1 >= argc){
-				lgr.warning("Incorrect number of args for flag: " + flag, true);
-				break;
-			}
-			outfile = argv[argi+1];
-			lgr.msg("Outfile: " + outfile, true);
-			argi++;
-		}else if (strcmp(flag.c_str(), "-or") == 0){
-			if (argi+1 >= argc){
-				lgr.warning("Incorrect number of args for flag: " + flag, true);
-				break;
-			}
-			outfile_r = argv[argi+1];
-			save_bpir = true;
-			lgr.msg("BPIR Outfile: " + outfile_r, true);
-			argi++;
-		}else if (strcmp(flag.c_str(), "-v") == 0){
-			verbose = true;
-		}else if (strcmp(flag.c_str(), "-dummy") == 0){
-			save_bpir = false;
-			save_bpi = false;
-		}else{
-			lgr.warning("Unrecognized flag: " + flag, true);
-		}
-	}
-
-
-
-	//---------------------- Read configuration file ---------------------------
-	map<string, string> settings;
-	if (!load_conf("quark.conf", settings)){
-		lgr.error("Failed to read configuration file", true);
-		return -1;
-	}
-	string isd_path = settings["isd_file_path"];
-	string cw_path = settings["cw_file_path"];
-	string lut_path = settings["lut_file_path"];
-	string arch_path = settings["Archive_Dir"];
-	string save_name = settings["save_name"];
-
-	string series = settings["Series"];
-	string architecture_name = settings["architecture_name"];
-
-	// Show configuration if requested
-	if (verbose){
-		show_conf(settings);
-	}
-
-	//----------------- Determine last archived version of ISV -----------------
-
-	// Get directories
-    if (verbose){
-		show_dir_contents(arch_path);
-	}
-
-	// Filter based on series name
-	vector<isv_data> sarc;
-	vector<isv_data> arc;
-	arc = get_arch_titles(arch_path, architecture_name);
-	for (size_t i = 0 ; i < arc.size() ; i++){
-		if (arc[i].series == series){
-			sarc.push_back(arc[i]);
-		}
-	}
-
-	// Get newest version
-	isv_data lastver;
-	lastver = newest_version(sarc);
-
-	cout << "NEWEST VERSION FOUND: " << endl;
-	cout << "\tSeries:       " << gc::bb << lastver.series << gc::normal << endl;
-	cout << "\tMajor:        " << gc::bb << lastver.major << gc::normal << endl;
-	cout << "\tFeature Set:  " << gc::bb << lastver.minor << gc::normal << endl;
-	cout << "\tPatch:        " << gc::bb << lastver.patch << gc::normal << endl;
-	cout << "\tArchitecture: " << gc::bb << lastver.arch << gc::normal << endl;
-
-	//-------------------- Load current and last ISV version -------------------
-
-	// Create InstructionSet objects
-	InstructionSet is;
-
-	// Read ISV files
-
-	// Read CW File
-	if (!is.load_cw(cw_path)){
-		lgr.error("Failed to read CW File ("+cw_path+")", true);
-		return -1;
-	}
-
-	// Read ISD File
-	if (!is.load_isd(isd_path)){
-		lgr.error("Failed to read ISD File ("+isd_path+")", true);
-		return -1;
-	}
-
-    //-------------------- Read program into vector ----------------------------
-
-    //read through file
-	ifstream file(filename.c_str());
-	if (!file.is_open()) {
-		lgr.error("Failed to read program source ("+filename+")", true);
-		return -1;
-	}
-
-	std::string line;
-	size_t line_num = 0;
-	vector<string_idx> plain_text;
-	while (getline(file, line)) {
-
-		line_num++;
-
-		trim_whitespace(line); //Remove whitespace from line
-
-		// Add line to plain text vector
-		string_idx nsi;
-		nsi.str = line;
-		nsi.idx = line_num;
-		plain_text.push_back(nsi);
-
-    }
-
-	//----------------------------- Run Lexer ----------------------------------
-
-	vector<qtoken> token_list;
-	if (!qlexer(plain_text, is, token_list, lgr)){
-		cout << lgr.all() << endl;
-		return -1;
-	}
-
-	// Print token list
-	if (show_tokens){
-		for (size_t t = 0 ; t < token_list.size() ; t++){
-			cout << tokenstr(token_list[t]) << " ";
-			if (token_list[t].type == TokenType::nl) cout << endl;
-		}
-	}
-
-	return 0;
-}
+#endif
