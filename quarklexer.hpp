@@ -192,6 +192,18 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 				nt.str = word;
 				nt.lnum = txt[i].idx;
 				tokens.push_back(nt);
+			}else if(isVersion(word)){ // Check if word is version literal
+				qtoken nt;
+				nt.type = TokenType::num;
+				size_t idx0 = word.find(".");
+				size_t idx1 = word.find(".", idx0+1);
+
+				nt.valv[0] = stoi(word.substr(0, idx0-1)); // Read major
+				nt.valv[1] = stoi(word.substr(idx0+1, idx1-1)); // Read minor
+				nt.valv[2] = stoi(word.substr(idx1)); // Read patch
+
+				nt.lnum = txt[i].idx;
+				tokens.push_back(nt);
 			}else if(isNumeric(word)){ // Check if word is numeric literal
 				qtoken nt;
 				nt.type = TokenType::num;

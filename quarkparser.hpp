@@ -126,6 +126,9 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				k++;
 			}
 
+			// Create class
+			// Statement obj(tokens, i, k, declaration);
+			// tree.push_back(obj);
 
 			i = k+1;
 		}else if(tokens[i].type == ins){ // Check if is a Machine Code Statement
@@ -139,7 +142,7 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 			}
 
 			// Create class
-			MachineCodeStatement obj(tokens, i, k);
+			Statement obj(tokens, i, k, st_machine_code);
 			tree.push_back(obj);
 
 			i = k+1;
@@ -163,6 +166,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				if (tokens[k].type == nl) break;
 				k++;
 			}
+
+			// Create class
+			Statement obj(tokens, i, k, st_directive);
+			tree.push_back(obj);
 
 			i = k+1;
 		}else if (tokens[i].type == key && tokens[i].str == "if"){ // If Statement
