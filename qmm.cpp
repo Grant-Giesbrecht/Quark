@@ -25,6 +25,7 @@ Created by G. Giesbrecht
 #include <cmath>
 #include <ctgmath>
 #include "GLogger.hpp"
+#include "gcolors.hpp"
 
 #include "subatomic.hpp"
 
@@ -56,7 +57,7 @@ int main(int argc, char** argv){
 
 	//Get input file's name
 	if (argc < 2){
-		lgr.error("Requires .q-- file's name (no spaces allowed) as input.", true);
+		lgr.error("Requires .q-- file's name (no spaces allowed) as input. Use -h for help.", true);
 		return -1;
 	}
 	string filename = argv[1];
@@ -68,10 +69,37 @@ int main(int argc, char** argv){
 	bool save_bpir = false;
 	bool save_bpi = true;
 	bool verbose = false;
-	for (int argi = 2 ; argi < argc ; argi++){
+	for (int argi = 1 ; argi < argc ; argi++){
 
 		// Get flag
 		flag = argv[argi];
+
+		// Only help flag can appear without file name
+		if (strcmp(flag.c_str(), "-h") == 0){
+			cout << endl <<  "*************************************************************************************************************************" << endl;
+			cout << "* Q-- Compiler                                                                                                          *" << endl;
+			cout << "*                                                                                                                       *" << endl;
+			cout << "* Usage                                                                                                                 *" << endl;
+
+
+			cout << "*  qmm ./path/to/sourcefile.q--    " << gcolor::blue << "Saves output file to working directory as 'out.bpi'." << gcolor::normal << "                                 *" << endl;
+
+			cout << "*  qmm ./path/to/sourcefile.q-- " << gcolor::red << "..." << gcolor::normal << " -o ./path/to/output_file.bpi    " << gcolor::blue << "Saves output as specified bpi file." << gcolor::normal << "                 *" << endl;
+
+			cout << "*  qmm ./path/to/sourcefile.q-- " << gcolor::red << "..." << gcolor::normal << " -or ./path/to/bpir_output_file.bpir    " << gcolor::blue << "Saves output as bpi and specified bpir file." << gcolor::normal << " *" << endl;
+
+			cout << "*  qmm ./path/to/sourcefile.q-- " << gcolor::red << "..." << gcolor::normal << " -v    " << gcolor::blue << "Use verbose output." << gcolor::normal << "                                                           *" << endl;
+
+			cout << "*  qmm ./path/to/sourcefile.q-- " << gcolor::red << "..." << gcolor::normal << " -dummy    " << gcolor::blue << "Do not save result to file." << gcolor::normal << "                                               *" << endl;
+
+			cout << "*                                                                                                                       *" << endl;
+			cout << "* Written by Grant Giesbrecht                                                                                           *" << endl;
+			cout << "*************************************************************************************************************************" << endl << endl;
+			return 0;
+		}
+
+		// Do not check for remaining flags for argument 1 (arg 1 must be filename)
+		if (argi < 2) continue;
 
 		// Get value
 		if (strcmp(flag.c_str(), "-o") == 0){
@@ -105,7 +133,7 @@ int main(int argc, char** argv){
 
 	//---------------------- Read configuration file ---------------------------
 	map<string, string> settings;
-	if (!load_conf("quark.conf", settings)){
+	if (!load_conf("/Users/grantgiesbrecht/Documents/GitHub/Quark/quark.conf", settings)){
 		lgr.error("Failed to read configuration file", true);
 		return -1;
 	}
@@ -262,7 +290,7 @@ int main(int argc, char** argv){
 				try{
 					nextqmm.data_bytes.push_back(gstd::fstoi(words[i].str));
 				}catch(...){
-					lgr.error("Failed to convert "+words[i].str+" to a number.");
+					lgr.error("Failed to convert "+words[i].str+" to a number.", true);
 					return -1;
 				}
 
