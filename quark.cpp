@@ -173,6 +173,12 @@ int main(int argc, char** argv){
 
     }
 
+	//----------------------- Create Language Spec -----------------------------
+
+	language_specs lang;
+	lang.op_data_to_ram = "PDATA_RAM0";
+
+
 	//----------------------------- Run Lexer ----------------------------------
 
 	vector<qtoken> token_list;
@@ -192,7 +198,7 @@ int main(int argc, char** argv){
 	}
 
 	// Create CompilerStatus object
-	CompilerState cs(is, log);
+	CompilerState cs(is, log, lang);
 	cs.log = log;
 
 	vector<Statement> tree;
@@ -213,7 +219,7 @@ int main(int argc, char** argv){
 		tree[i].exec(cs, log);
 	}
 
-	cout << "BPIR: " << endl;
+	cout << "\nBPIR: " << endl;
 	cout << cs.str() << endl;
 
 	return 0;

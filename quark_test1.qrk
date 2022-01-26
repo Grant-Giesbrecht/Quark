@@ -1,8 +1,10 @@
 #ARCH Matterhorn
-#ISV 0.0.0
+#SERIES Proto
+#ISV 2.1.0
 
-int x = 7 @ &x = 1400;
-int y = 9 @ &y = 1401;
+int z;
+int x = 7;
+int32 y = 9 @ &y = 1401;
 
 PMEM_REGA 1400;
 PMEM_REGB 1401;

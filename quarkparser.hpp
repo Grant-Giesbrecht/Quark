@@ -57,7 +57,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 	// Create list of type-keywords
 	vector<string> type_keyword_list;
 	type_keyword_list.push_back("int");
-	type_keyword_list.push_back("int8");
+	type_keyword_list.push_back("int32");
+	type_keyword_list.push_back("uint");
+	type_keyword_list.push_back("uint8");
+	type_keyword_list.push_back("bool");
 	type_keyword_list.push_back("float");
 	type_keyword_list.push_back("float8");
 	type_keyword_list.push_back("addr");
@@ -116,7 +119,7 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 	size_t i = 0;
 	while (i < tokens.size()){
 
-		if (tokens[i].type == typ && i < tokens.size()-2 && tokens[i+2].type == op && tokens[i+2].str == "="){ // Check if is a Declaration Statement
+		if (tokens[i].type == typ){ // Check if is a Declaration Statement
 			log.info("Declaration Statement, line: " + to_string(tokens[i].lnum));
 
 			// Find end

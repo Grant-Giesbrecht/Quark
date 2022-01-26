@@ -58,7 +58,9 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 	// Create list of type-keywords
 	vector<string> type_keyword_list;
 	type_keyword_list.push_back("int");
-	type_keyword_list.push_back("int8");
+	type_keyword_list.push_back("int32");
+	type_keyword_list.push_back("uint");
+	type_keyword_list.push_back("uint8");
 	type_keyword_list.push_back("float");
 	type_keyword_list.push_back("float8");
 	type_keyword_list.push_back("addr");
