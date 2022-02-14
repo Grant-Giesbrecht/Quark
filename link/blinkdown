@@ -12,12 +12,49 @@
 
 import pyvisa as pv
 import time
+import sys, getopt
+
+filename = "downlink.mcb"
+readlength = 30 # If changed, update default in help print statements
+
+argv = sys.argv[1:]
+
+try:
+	opts, args = getopt.getopt(argv,"hco:l:", [])
+except getopt.GetoptError:
+	print("blinkdown -o <filename>		(Use -h for help)")
+	sys.exit(2)
+for opt, arg in opts:
+	if opt == '-h':
+		print("Blinkenrechner Project Flash Downloader")
+		print("")
+		print("Usage:")
+		print("  blinkdown ... -o <out_file>")
+		print("  blinkdown ... -l <read length>")
+		print("  blinkdown ... -h")
+		print("  blinkdown ... -c <compare_file>")
+		print("")
+		print("Description")
+		print("  -o  Specify output file (Default: downlink.mcb)")
+		print("  -l  Specify read length. Cannot be used with -c flag. (Default: 30)")
+		print("  -h  Show help")
+		print("  -c  Specify comparison MCB file. Will read lines found in this file")
+		print("      and check if flash memory agrees. Cannot be used with -l flag.")
+		sys.exit()
+	if opt == '-c':
+		print("Feature not implemented")
+		# print 'test.py -i <inputfile> -o <outputfile>'
+		sys.exit()
+	elif opt in ("-o"):
+		filename = arg
+
+# print 'Input file is "', inputfile
+# print 'Output file is "', outputfile
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta_downlink.bcm"
 # readlength = 1001;
-filename = "./Example Data/blinken_downlink.mcb"
-readlength = 4359;
-readlength = 30;
+# readlength = 4359;
+# readlength = 30;
 
 lines_per_batch = 512
 
