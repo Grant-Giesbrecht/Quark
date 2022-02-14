@@ -122,30 +122,8 @@ std::string tokenstr(qtoken tok){
 }
 
 /*
-Convert a qtoken to a string for BPIR
+Checks if a given string is a valid version literal (eg. "1.2.3")
 */
-std::string tokenvalstr(qtoken tok, int fmt){
-
-	std::string str;
-
-	switch(tok.type){
-		case TokenType::num:
-			(tok.use_float) ? str = to_string(tok.valf) : str = to_string(tok.vali);
-			break;
-		case TokenType::nl: // Should never be used for BPIR
-			str = "Newline";
-			break;
-		case TokenType::ver: // Should never be used for BPIR
-			str = "Version";
-			break;
-		default:
-			str = tok.str;
-			break;
-	}
-
-	return str;
-}
-
 bool isVersion(std::string str){
 
 	// Try to find seperators
@@ -177,6 +155,11 @@ bool isVersion(std::string str){
 
 //============================= COMPILER STATE =================================
 
+/*
+Class capturing the internal state of the compiler. Contains data such as variables
+and subroutines, along with the machine code list (bpir), loggers, the instruction
+set definition, language specs, and memory allocation details.
+*/
 class CompilerState{
 public:
 	CompilerState(InstructionSet is, GLogger& log, language_specs ls);
@@ -208,6 +191,10 @@ public:
 
 	void add(std::string data);
 	void add(std::string data, size_t lnum);
+	size_t addToken(qtoken tok);
+
+	bool hasVar(std::string name);
+	size_t idxVar(std::string name);
 
 	size_t next_ram(size_t num_bytes, std::string useage, std::string name);
 
@@ -232,6 +219,44 @@ private:
 	static const int mask_data_error     = 0b00000010;
 
 };
+
+/*
+Convert a qtoken to a string for BPIR
+*/
+std::string tokenvalstr(qtoken tok, CompilerState& cs){
+
+	std::string str;
+
+	int fmt = cs.num_format;
+
+	switch(tok.type){
+		case TokenType::num:
+			(tok.use_float) ? str = to_string(tok.valf) : str = to_string(tok.vali);
+			break;
+		// case TokenType::id: // Most likely a variable
+		// 	if (cs.hasVar(tok.str)){
+		//
+		// 		cs.vars[cs.idxVar(tok.str)].addr
+		//
+		// 	// }else if(cs.hasSub(tok.str)){
+		//
+		// 	}else{
+		// 		str = "InvalidID"
+		// 		cs.log.error("Failed to convert token of type 'ID' to value. (Token: "+tokenstr(tok)+")");
+		// 	}
+		case TokenType::nl: // Should never be used for BPIR
+			str = "Newline";
+			break;
+		case TokenType::ver: // Should never be used for BPIR
+			str = "Version";
+			break;
+		default:
+			str = tok.str;
+			break;
+	}
+
+	return str;
+}
 
 /*
 CompilerState Initializer
@@ -274,6 +299,32 @@ void CompilerState::add(std::string data){
 }
 
 /*
+Adds a token to the BPIR vector. Similar to 'add()', except by accepting tokens,
+it can accept variables (type=id) which will have 2-byte addresses and thus couldn't
+be added in a single call to 'add()'.
+
+Returns number of bytes added.
+*/
+size_t CompilerState::addToken(qtoken tok){
+
+	if (tok.type == num){ // Save numeric literal
+		add(tokenvalstr(tok, *this));
+		return 1;
+	}else if(tok.type == id){ //Dereference variables
+
+		uint32_t full_value = tok.vali; // Create base value
+		uint32_t mask8 = 255; // Create mask
+		add(to_string( full_value & mask8) ); // Add byte 0
+		add(to_string( full_value & (mask8 << 8) )); // Add byte 1
+		return 2;
+	}else{
+		log.error("Unrecognized Token type passed to 'addToken()' (Token: " + tokenstr(tok) + ")");
+		return 0;
+	}
+
+}
+
+/*
 Adds a string of data and a line number to the BPIR vector. Keeps the vector
 sorted by line number.
 
@@ -300,6 +351,28 @@ void CompilerState::add(std::string data, size_t lnum){
 			bpir.insert(bpir.begin()+nidx, line);
 		}
 	}
+}
+
+/*
+Checks if a variable with the id 'name' is in the CompilerState object.
+*/
+bool CompilerState::hasVar(std::string name){
+
+	if (idxVar(name) == std::string::npos) return false;
+
+	return true;
+}
+
+/*
+Returns the index of the variable with id 'name'. Return string::npos if not found.
+*/
+size_t CompilerState::idxVar(std::string name){
+
+	for (size_t v = 0 ; v < vars.size() ; v++){
+		if (vars[v].id == name) return v;
+	}
+
+	return std::string::npos;
 }
 
 /*
@@ -335,6 +408,12 @@ std::string CompilerState::str(){
 
 //============================= STATEMENT BASE =================================
 
+/*
+Class representing one Quark statement. This is typically over one line, however
+for some special types of statements such as if-statements or while-loops (ie.
+statements with curly braces), statements can span multiple lines and contain
+blocks with additional statements therein.
+*/
 class Statement{
 public:
 	Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx, StatementType t);
@@ -346,8 +425,19 @@ public:
 	bool exec_machine_code(CompilerState& cs, GLogger& log);
 	bool exec_directive(CompilerState& cs, GLogger& log);
 	bool exec_declaration(CompilerState& cs, GLogger& log);
+
+	// Specifies if statement has been executed. Used to determine if 'src' or
+	// 'data_string' should be used for string representation.
+	bool was_executed;
+
+	// String representation of 'src', broken into statement parameters such as
+	// (for a declaration) type, name, value, address, etc.
+	std::string data_string;
 };
 
+/*
+Initializer
+*/
 Statement::Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx, StatementType t){
 
 	// Save type
@@ -357,8 +447,15 @@ Statement::Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx, S
 	vector<qtoken> subvec(tokens.begin() + start_idx, tokens.begin() + end_idx);
 	src = subvec;
 
+	was_executed = false;
 }
 
+/*
+Executes the statement. This involves converting the Statement, which is composed
+of qtokens + etc, into a series of one or more machine code instructions (added
+to the BPIR in the CompilerState object), and perhaps modifying the CompilerState
+through the addition of variables or subroutines.
+*/
 bool Statement::exec(CompilerState& cs, GLogger& log){
 
 	bool status = false;
@@ -382,6 +479,27 @@ bool Statement::exec(CompilerState& cs, GLogger& log){
 	return status;
 }
 
+/*
+Declarations work by creating qtokens for each element of the declaration statement
+based on token order. Once tokens for the type, name, data, etc are had, the
+type of variable (eg. int, float, addr, etc) is determined in an if-statement.
+
+From here, a new variable in the CompilerState object 'cs' is created (the variable
+added is a struct of type 'varaible', and it's added to the CompilterState's  'vars'
+vector, which is simply a vector of 'variable' structs.). 'variable' structs have
+an id, type, address and name. Thus, in later lines of code, this variable's ID
+can be replaced with the variable's address.
+
+If the declaration statement initializes the variable with a value, the exact same
+behavior outline for non-initialized varaibles occurs, however an instruction is
+added to the output progra (via the cs.add() function) which instructs a specific
+data value (ie. the initial value) to be written to the address assigned to the
+variable.
+
+Variable addresses are assigned such that they are only in RAM0, and the address
+is assigned as the 'variable' struct is created (ie. in this function, as the
+declaration statement is processed). The assigned address comes from the 'cs.next_'
+*/
 bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 
 	bool state = true;
@@ -554,11 +672,7 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 			uint32_t mask8 = 255;
 			var_bytes.push_back(full_value & mask8);
 			var_bytes.push_back(full_value & (mask8 << 8));
-			var_bytes.push_back(full_value & (mask8 << 16));
-			var_bytes.push_back(full_value & (mask8 << 24));
 		}else{
-			var_bytes.push_back(0);
-			var_bytes.push_back(0);
 			var_bytes.push_back(0);
 			var_bytes.push_back(0);
 		}
@@ -669,7 +783,7 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		}
 
 		// Check maximum value
-		int maxval = 4294967295; // From 2^16-1
+		long maxval = 4294967295; // From 2^16-1 TODO: Is changing int to long a problem
 		int minval = 0;
 		if (has_value && (var_val.vali > maxval || var_val.vali < minval)){
 			log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [" + to_string(minval) + ", " + to_string(maxval) + "]." , src[0].lnum);
@@ -770,19 +884,22 @@ bool Statement::exec_machine_code(CompilerState& cs, GLogger& log){
 	// First element of statement is machine code instruction
 	cs.add(instruction.str);
 
-	// Error check instruction
+	// Error check instruction - Instruction exists
 	if (cs.is.ops.count(instruction.str) < 1){ // Check instruction exists
 		log.lerror("Failed to find instruction '"+instruction.str+"'.", instruction.lnum);
 		state = false;
 	}
+
+	// Next element of line is all data bits
+	size_t num_bits = 0;
+	for (size_t i = 0 ; i < data_bytes.size() ; i++){
+		num_bits += cs.addToken(data_bytes[i]);
+	}
+
+	// Error check instruction - Correct number of bits
 	if (cs.is.ops[instruction.str].data_bits != data_bytes.size()){
 		log.lerror("Instruction '"+instruction.str+"' given incorrect number of data bytes (" + to_string(data_bytes.size()) + " instead of " + to_string(cs.is.ops[instruction.str].data_bits) + ").", instruction.lnum);
 		state = false;
-	}
-
-	// Next element of line is all data bits
-	for (size_t i = 0 ; i < data_bytes.size() ; i++){
-		cs.add(tokenvalstr(data_bytes[i], cs.num_format));
 	}
 
 	return state;
@@ -960,6 +1077,73 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 	}
 
 	return state;
+}
+
+/*
+Create a string representing the Statement object.
+*/
+std::string statementstr(Statement& s, long int start_idx=-1, size_t fold_level=0){
+
+	std::string str;
+
+	// Mark statement type
+	switch(s.type){
+		case StatementType::st_declaration:
+			str = "[st_declaration:";
+			break;
+		case StatementType::st_machine_code:
+			str = "[st_machine_code:";
+			break;
+		case StatementType::st_reassignment:
+			str = "[st_reassignment:";
+			break;
+		case StatementType::st_directive:
+			str = "[st_directive:";
+			break;
+		case StatementType::st_if:
+			str = "[st_if:";
+			break;
+		case StatementType::st_while:
+			str = "[st_while:";
+			break;
+		case StatementType::st_subroutine:
+			str = "[st_subroutine:";
+			break;
+		case StatementType::st_macro:
+			str = "[st_macro:";
+			break;
+		case StatementType::st_expansion:
+			str = "[st_expansion:";
+			break;
+		case StatementType::st_subroutine_call:
+			str = "[st_subroutine_call:";
+			break;
+	}
+
+	// Add counter
+	if (start_idx != -1){
+
+		str = std::to_string(fold_level) + "," + std::to_string(start_idx) + " " + str;
+
+		// Add indentations
+		for (size_t i = 0 ; i < fold_level ; i++){
+			str = "  " + str;
+		}
+
+	}
+
+	// Add statement data
+	if (!s.was_executed){
+		for (size_t t = 0 ; t < s.src.size() ; t++){
+			str = str + " " + tokenstr(s.src[t]);
+		}
+		str = str + "]";
+	}else{
+		str = str + " " + s.data_string + "]";
+	}
+
+	return str;
+
 }
 
 

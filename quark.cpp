@@ -1,5 +1,5 @@
 //CXCOMPILE make quark
-//CXCOMPILE ./quark quark_test1.qrk
+//CXCOMPILE ./quark quark_test1.qrk -tok -state
 //CXGENRUN FALSE
 
 #include <iostream>
@@ -24,9 +24,9 @@
 using namespace std;
 using namespace gstd;
 
-int main(int argc, char** argv){
+void print_quark_help();
 
-	bool show_tokens = true;
+int main(int argc, char** argv){
 
 	GLogger log;
 	log.setLevel(LOGGER_MSG);
@@ -38,6 +38,12 @@ int main(int argc, char** argv){
 	}
 	string filename = argv[1];
 
+	// Check for help prompt
+	if (strcmp(filename.c_str(), "-h") == 0 || strcmp(filename.c_str(), "-help") == 0){
+		print_quark_help();
+		return -1;
+	}
+
 	// Read output flags
 	string flag;
 	string outfile = "out.bpi";
@@ -45,6 +51,9 @@ int main(int argc, char** argv){
 	bool save_bpir = false;
 	bool save_bpi = true;
 	bool verbose = false;
+	bool show_tokens = false;
+	bool show_statements = false;
+
 	for (int argi = 2 ; argi < argc ; argi++){
 
 		// Get flag
@@ -73,6 +82,10 @@ int main(int argc, char** argv){
 		}else if (strcmp(flag.c_str(), "-dummy") == 0){
 			save_bpir = false;
 			save_bpi = false;
+		}else if (strcmp(flag.c_str(), "-tok") == 0 || strcmp(flag.c_str(), "-token") == 0 || strcmp(flag.c_str(), "-t") == 0){
+			show_tokens = true;
+		}else if (strcmp(flag.c_str(), "-state") ==0 || strcmp(flag.c_str(), "-s") == 0){
+			show_statements = true;
 		}else{
 			log.warning("Unrecognized flag: " + flag, true);
 		}
@@ -212,6 +225,15 @@ int main(int argc, char** argv){
 	cout << "Lexer and Parser returned with no errors." << endl;
 	cout << log.all() << endl;
 
+	// Print statement list
+	if (show_statements){
+		cout << "Statement List:" << endl;
+		for (size_t t = 0 ; t < tree.size() ; t++){
+			cout << statementstr(tree[t], t) << endl;
+			// if (token_list[t].type == TokenType::nl) cout << endl;
+		}
+	}
+
 	cout << "Tree size: " << tree.size() << endl;
 
 	// Run through tree and execute each statement
@@ -223,4 +245,8 @@ int main(int argc, char** argv){
 	cout << cs.str() << endl;
 
 	return 0;
+}
+
+void print_quark_help(){
+	cout << "Quark help" << endl;
 }
