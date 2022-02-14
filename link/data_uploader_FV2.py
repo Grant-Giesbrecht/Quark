@@ -1,3 +1,5 @@
+#!/usr/local/bin/python3
+
 import pyvisa as pv
 import time
 

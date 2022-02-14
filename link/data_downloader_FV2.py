@@ -1,3 +1,5 @@
+#!/usr/local/bin/python3
+
 # from IPython import get_ipython
 #
 # try:
