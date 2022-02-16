@@ -89,6 +89,7 @@ std::string tokenstr(qtoken tok){
 			break;
 		case TokenType::ver:
 			str = "[ver: \"" + gcolor::magenta + to_string(tok.valv[0]) + "." + to_string(tok.valv[1]) + "." + to_string(tok.valv[2]) + gcolor::normal + "]";
+			break;
 		case TokenType::op:
 			str = "[op: \"" + gcolor::magenta + tok.str + gcolor::normal + "\"]";
 			break;
@@ -134,8 +135,8 @@ bool isVersion(std::string str){
 	if (idx0 == std::string::npos || idx1 == std::string::npos) return false;
 
 	// Get string
-	std::string maj = str.substr(0, idx0-1);
-	std::string min = str.substr(idx0+1, idx1-1);
+	std::string maj = str.substr(0, idx0);
+	std::string min = str.substr(idx0+1, idx1-idx0-1);
 	std::string patch = str.substr(idx1+1);
 
 	// Return false if any number string is missing (zero length)
@@ -432,7 +433,7 @@ public:
 
 	// String representation of 'src', broken into statement parameters such as
 	// (for a declaration) type, name, value, address, etc.
-	std::string data_string;
+	std::string data_string; //TODO: Populate this string in each 'exec' function.
 };
 
 /*
@@ -448,6 +449,7 @@ Statement::Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx, S
 	src = subvec;
 
 	was_executed = false;
+	data_string = "<string not populated>";
 }
 
 /*
@@ -507,13 +509,16 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 	// Save instruction token
 	qtoken var_type = src[0];
 
-	// Save instruction token
+	// Save ID token
 	if (src[1].type != id){
 		log.lerror("Variable declaration requires an identifier token after variable type.", src[0].lnum);
 		state = false;
 		return state;
 	}
+	string dc = gcolor::blue;
+	string gn = gcolor::normal;
 	qtoken var_id = src[1];
+	data_string = "[var-name: " + dc + var_id.str +  gn +"]";
 
 	// Check for semicolon
 	if (!(src[src.size()-1].type == sep && src[src.size()-1].str == ";")){
@@ -857,6 +862,9 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		// cs.add();
 	}
 
+	// Mark statement as executed, print via data_string
+	was_executed = true;
+
 	return state;
 
 }
@@ -901,6 +909,9 @@ bool Statement::exec_machine_code(CompilerState& cs, GLogger& log){
 		log.lerror("Instruction '"+instruction.str+"' given incorrect number of data bytes (" + to_string(data_bytes.size()) + " instead of " + to_string(cs.is.ops[instruction.str].data_bits) + ").", instruction.lnum);
 		state = false;
 	}
+
+	// Mark statement as executed, print via data_string
+	// was_executed = true;
 
 	return state;
 }
