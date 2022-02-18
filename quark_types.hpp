@@ -304,6 +304,11 @@ Adds a token to the BPIR vector. Similar to 'add()', except by accepting tokens,
 it can accept variables (type=id) which will have 2-byte addresses and thus couldn't
 be added in a single call to 'add()'.
 
+tok: Token of type 'num' or 'id'. Tokens of type 'num' must have 8-bit data
+     representing a value to place on a single line of the BPIR vector. Tokens
+	 of type 'id' must have a 16-bit address which will be saved over 2 lines.
+
+
 Returns number of bytes added.
 */
 size_t CompilerState::addToken(qtoken tok){
@@ -329,7 +334,26 @@ size_t CompilerState::addToken(qtoken tok){
 Adds a string of data and a line number to the BPIR vector. Keeps the vector
 sorted by line number.
 
-Does not update next_line.
+data: 8-bit value to add to BPIR
+lnum: BPIR address at which to add data.
+
+ex:
+BPIR Start:
+0:0xFF
+1:0xA0
+2:0x6D
+10:0xFF
+
+add(0x55, 7)
+
+BPIR End:
+0:0xFF
+1:0xA0
+2:0x6D
+7:0x55
+10:0xFF
+
+Does not update next_line. (Call to add without lnum does increment lnum).
 */
 void CompilerState::add(std::string data, size_t lnum){
 
@@ -431,6 +455,11 @@ public:
 	// 'data_string' should be used for string representation.
 	bool was_executed;
 
+	// Color constants for data_string formatting
+	string dc; // Data string data color
+	string lc; // Data string label color
+	string gn; // Normal
+
 	// String representation of 'src', broken into statement parameters such as
 	// (for a declaration) type, name, value, address, etc.
 	std::string data_string; //TODO: Populate this string in each 'exec' function.
@@ -450,6 +479,10 @@ Statement::Statement(vector<qtoken>& tokens, size_t start_idx, size_t end_idx, S
 
 	was_executed = false;
 	data_string = "<string not populated>";
+
+	dc = gcolor::blue;
+	lc = gcolor::yellow;
+	gn = gcolor::normal;
 }
 
 /*
@@ -515,8 +548,6 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		state = false;
 		return state;
 	}
-	string dc = gcolor::blue;
-	string gn = gcolor::normal;
 	qtoken var_id = src[1];
 	data_string = "[var-name: " + dc + var_id.str +  gn +"]";
 
@@ -743,8 +774,8 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		}
 
 		// Check maximum value
-		int maxval = 7; // From 2^32-1
-		int minval = -8;
+		int maxval = 127; // From (2^8)/2-1
+		int minval = -128;
 		if (has_value && (var_val.vali > maxval || var_val.vali < minval)){
 			log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [" + to_string(minval) + ", " + to_string(maxval) + "]." , src[0].lnum);
 			state = false;
@@ -770,7 +801,8 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		nv.len = 2;
 		nv.addr = cs.next_ram(nv.len, "var", nv.id);
 
-		cs.vars.push_back(nv);	}else if (var_type.str.compare("int32") == 0){
+		cs.vars.push_back(nv);
+	}else if (var_type.str.compare("int32") == 0){
 		// This is for all types initialized from a 16 bit unsigned integer
 
 		// Check literal type
@@ -885,7 +917,7 @@ bool Statement::exec_machine_code(CompilerState& cs, GLogger& log){
 	}
 
 	// Save data bit tokens
-	vector<qtoken> data_bytes(src.begin() + 1, src.end()-offset);
+	vector<qtoken> data_tokens(src.begin() + 1, src.end()-offset);
 
 	//=============== Initialization Above, Exec Below =========================
 
@@ -900,18 +932,22 @@ bool Statement::exec_machine_code(CompilerState& cs, GLogger& log){
 
 	// Next element of line is all data bits
 	size_t num_bits = 0;
-	for (size_t i = 0 ; i < data_bytes.size() ; i++){
-		num_bits += cs.addToken(data_bytes[i]);
+	for (size_t i = 0 ; i < data_tokens.size() ; i++){
+		num_bits += cs.addToken(data_tokens[i]);
 	}
 
 	// Error check instruction - Correct number of bits
-	if (cs.is.ops[instruction.str].data_bits != data_bytes.size()){
-		log.lerror("Instruction '"+instruction.str+"' given incorrect number of data bytes (" + to_string(data_bytes.size()) + " instead of " + to_string(cs.is.ops[instruction.str].data_bits) + ").", instruction.lnum);
+	if (cs.is.ops[instruction.str].data_bits != num_bits){
+		log.lerror("Instruction '"+instruction.str+"' given incorrect number of data bytes (" + to_string(num_bits) + " instead of " + to_string(cs.is.ops[instruction.str].data_bits) + ").", instruction.lnum);
 		state = false;
 	}
 
 	// Mark statement as executed, print via data_string
-	// was_executed = true;
+	was_executed = true;
+	data_string = "("+lc+"inst"+gn+": " + dc + instruction.str + gn + ")";
+	for (size_t i = 0 ; i < data_tokens.size() ; i++){
+		data_string = data_string + " ("+lc+"data"+gn+": " + tokenstr(data_tokens[i]) + ")";
+	}
 
 	return state;
 }
@@ -964,6 +1000,10 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 		// Save architecture type
 		cs.architecture = data_tokens[0].str;
 
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#ARCH"+gn+") ("+lc+"architecture"+gn+": "+dc+data_tokens[0].str+gn+")";
+
 	}else if (directive.str.compare("#SERIES") == 0){
 
 		if (data_tokens.size() != 1){
@@ -979,6 +1019,10 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 
 		// Save ISV series
 		cs.isv_series = data_tokens[0].str;
+
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#SERIES"+gn+") ("+lc+"series"+gn+": "+dc+data_tokens[0].str+gn+")";
 
 	}else if (directive.str.compare("#ISV") == 0){
 
@@ -999,6 +1043,10 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 		cs.isv_patch = data_tokens[0].valv[2];
 		cs.isv_exact_match = false;
 
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#ISV"+gn+") ("+lc+"version"+gn+": "+tokenstr(data_tokens[0])+gn+")";
+
 	}else if (directive.str.compare("#ISV_EXACT") == 0){
 
 		if (data_tokens.size() != 1){
@@ -1017,6 +1065,10 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 		cs.isv_minor   = data_tokens[0].valv[1];
 		cs.isv_patch = data_tokens[0].valv[2];
 		cs.isv_exact_match = true;
+
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#ISV_EXACT"+gn+") ("+lc+"version"+gn+": "+tokenstr(data_tokens[0])+gn+")";
 
 	}else if (directive.str.compare("#PMEM") == 0){
 
@@ -1040,6 +1092,10 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 			cs.pmem = pmem_ram;
 		}
 
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#PMEM"+gn+") ("+lc+"memory_location"+gn+": "+dc+data_tokens[0].str+gn+")";
+
 	}else if (directive.str.compare("#TRUEVAL") == 0){
 
 		if (data_tokens.size() != 1){
@@ -1053,8 +1109,12 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 			return state;
 		}
 
-		// Save ISV series
+		// Save value
 		cs.true_val = data_tokens[0].vali;
+
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#TRUEVAL"+gn+") ("+lc+"data"+gn+": "+dc+to_string(data_tokens[0].vali)+gn+")";
 
 	}else if (directive.str.compare("#FALSEVAL") == 0){
 
@@ -1069,8 +1129,13 @@ bool Statement::exec_directive(CompilerState& cs, GLogger& log){
 			return state;
 		}
 
-		// Save ISV series
+		// Save value
 		cs.false_val = data_tokens[0].vali;
+
+		// Update data string
+		was_executed = true;
+		data_string = "("+lc+"directive"+gn+": "+dc+"#FALSEVAL"+gn+") ("+lc+"data"+gn+": "+dc+to_string(data_tokens[0].vali)+gn+")";
+
 	}else if (directive.str.compare("#INCLUDE") == 0){
 
 		//TODO:
