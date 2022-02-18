@@ -130,8 +130,8 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 			}
 
 			// Create class
-			// Statement obj(tokens, i, k, declaration);
-			// tree.push_back(obj);
+			Statement obj(tokens, i, k, st_declaration);
+			tree.push_back(obj);
 
 			i = k+1;
 		}else if(tokens[i].type == ins){ // Check if is a Machine Code Statement
@@ -158,6 +158,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				if (tokens[k].type == nl) break;
 				k++;
 			}
+
+			// Create class
+			Statement obj(tokens, i, k, st_reassignment);
+			tree.push_back(obj);
 
 			i = k+1;
 		}else if (tokens[i].type == cd){ // Directive Statement
@@ -208,6 +212,16 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 
 				i = k+1;
 			}
+
+			// cout << i << " " << k << endl;
+
+			//TODO: Fix locate and add if-else. Found end to be before start.
+			cout << gcolor::red << "qparser: handles if-else + perhaps while incorrectly" << gcolor::normal << endl;
+
+			// Create class
+			// Statement obj(tokens, i, k, st_if); //TODO: Check that this is located correctly for i & k to be correct
+			// tree.push_back(obj);
+
 		}else if (tokens[i].type == key && tokens[i].str == "while"){
 			log.info("While Statement, line: " + to_string(tokens[i].lnum));
 
@@ -217,6 +231,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				if (tokens[k].type == sep && tokens[k].str == "}") break;
 				k++;
 			}
+
+			// Create class
+			Statement obj(tokens, i, k, st_while);
+			tree.push_back(obj);
 
 			i = k+1;
 		}else if (tokens[i].type == key && tokens[i].str == "subroutine"){
@@ -236,6 +254,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				k++;
 			}
 
+			// Create class
+			Statement obj(tokens, i, k, st_subroutine);
+			tree.push_back(obj);
+
 			i = k+1;
 		}else if (tokens[i].type == key && tokens[i].str == "macro"){
 			log.info("Macro Statement, line: " + to_string(tokens[i].lnum));
@@ -254,6 +276,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				k++;
 			}
 
+			// Create class
+			Statement obj(tokens, i, k, st_macro);
+			tree.push_back(obj);
+
 			i = k+1;
 		}else if (tokens[i].type == key && tokens[i].str == "expand"){
 			log.info("Expand Statement, line: " + to_string(tokens[i].lnum));
@@ -264,6 +290,10 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				if (tokens[k].type == nl) break;
 				k++;
 			}
+
+			// Create class
+			Statement obj(tokens, i, k, st_expansion);
+			tree.push_back(obj);
 
 			i = k+1;
 		}else if (tokens[i].type == id && i < tokens.size()-1 && tokens[i+1].type == sep && tokens[i+1].str == "("){
@@ -276,12 +306,17 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 				k++;
 			}
 
+			// Create class
+			Statement obj(tokens, i, k, st_subroutine_call);
+			tree.push_back(obj);
+
 			i = k+1;
 		}else if(tokens[i].type == nl){
 			log.info("Empty Line, line: " + to_string(tokens[i].lnum));
 			i++;
 		}else{
 			log.lerror("Failed to identify statement.", tokens[i].lnum);
+			parse_status = false;
 
 			// Find end
 			k = i+1;
