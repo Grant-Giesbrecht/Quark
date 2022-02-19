@@ -129,7 +129,7 @@ bool qlexer(vector<string_idx> txt, InstructionSet is, vector<qtoken>& tokens, G
 		// Remove comment from line
 		size_t cmt_idx = line.find("//"); // Find comment_spec occurance (find first occurance)
 		if (cmt_idx != std::string::npos){ // Remove everything after comment
-			cmt_tok.type = TokenType::key;
+			cmt_tok.type = TokenType::cmt;
 			cmt_tok.str = line.substr(cmt_idx);
 			cmt_tok.lnum = txt[i].idx;
 			line = line.substr(0, cmt_idx); // Trim line

@@ -179,6 +179,21 @@ bool qparser(vector<qtoken> tokens, InstructionSet is, CompilerState& cs, vector
 			tree.push_back(obj);
 
 			i = k+1;
+		}else if (tokens[i].type == cmt){ // Comment
+			log.info("Comment, line: " + to_string(tokens[i].lnum));
+
+			// Find end
+			k = i+1;
+			while (k < tokens.size()){
+				if (tokens[k].type == nl) break;
+				k++;
+			}
+
+			// // Create class
+			// Statement obj(tokens, i, k, st_cmt);
+			// tree.push_back(obj);
+
+			i = k+1;
 		}else if (tokens[i].type == key && tokens[i].str == "if"){ // If Statement
 			// Find end of first closing bracket
 			k = i+1;
