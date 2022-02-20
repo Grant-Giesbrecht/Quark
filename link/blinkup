@@ -3,12 +3,20 @@
 import pyvisa as pv
 import time
 import sys, getopt
+from colorama import Fore, Style
 
-filename = "../../Quark-Programs/BrPgm-3/Build/BrPgm3.bpi"
+filename = ""
 lines_per_batch = 512
 specd_file = False
 
-argv = sys.argv[1:]
+# Get input file
+if len(sys.argv) < 2:
+	print(f"{Fore.RED}ERROR: Missing file to upload. Use -h for help.{Style.RESET_ALL}")
+	sys.exit()
+
+filename = sys.argv[1]
+
+argv = sys.argv[2:]
 
 show_addresses = False
 
@@ -22,24 +30,22 @@ for opt, arg in opts:
 		print("Blinkenrechner Project Flash Uploader")
 		print("")
 		print("Usage:")
-		print("  blinkdown ... -i <out_file>")
-		print("  blinkdown ... -h")
-		print("  blinkdown ... -a")
+		print("  blinkup <filename>")
+		# print("  blinkdown ... -i <out_file>")
+		print("  blinkup ... -h")
+		print("  blinkup ... -a")
 		print("")
 		print("Description")
-		print("  -o  File to upload")
+		# print("  -o  File to upload")
 		print("  -h  Show help")
 		print("  -a  Show addresses")
 		sys.exit()
-	elif opt in ("-i"):
-		filename = arg
-		specd_file = True
 	elif opt == "-a":
 		show_addresses = True
 
-if not specd_file:
-	print("blinkup -i <filename>		(Use -h for help)")
-	sys.exit()
+# if not specd_file:
+# 	print("blinkup -i <filename>		(Use -h for help)")
+# 	sys.exit()
 
 t_upload = []
 t_write = []
