@@ -10,8 +10,10 @@ specd_file = False
 
 argv = sys.argv[1:]
 
+show_addresses = False
+
 try:
-	opts, args = getopt.getopt(argv,"hi:", [])
+	opts, args = getopt.getopt(argv,"hi:a", [])
 except getopt.GetoptError:
 	print("blinkup -i <filename>		(Use -h for help)")
 	sys.exit(2)
@@ -22,14 +24,18 @@ for opt, arg in opts:
 		print("Usage:")
 		print("  blinkdown ... -i <out_file>")
 		print("  blinkdown ... -h")
+		print("  blinkdown ... -a")
 		print("")
 		print("Description")
 		print("  -o  File to upload")
 		print("  -h  Show help")
+		print("  -a  Show addresses")
 		sys.exit()
 	elif opt in ("-i"):
 		filename = arg
 		specd_file = True
+	elif opt == "-a":
+		show_addresses = True
 
 if not specd_file:
 	print("blinkup -i <filename>		(Use -h for help)")
@@ -38,18 +44,26 @@ if not specd_file:
 t_upload = []
 t_write = []
 
-port = "BACK_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
+port = "FIRST"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
 
 chip_erase = True
 
 #Open connection to Arduino
 rm = pv.ResourceManager()
+addr = "INVALID"
 try:
+	addr_list = rm.list_resources()
+	if show_addresses:
+		print("Detected Addresses:")
+		for ad in addr_list:
+			print(f"\t{ad}")
+		print("")
 	if port == "FIRST":
-		addr_list = rm.list_resources()[1]
+		for ad in addr_list:
+			if not ("BLTH"  in ad or "tooth" in ad):
+				addr = ad
+		# addr = rm.list_resources()[1]
 	else:
-		addr_list = rm.list_resources()
-		addr = "INVALID"
 		for ad in addr_list:
 			if port == "BACK_LEFT":
 				if '14401' in ad:
@@ -63,10 +77,16 @@ try:
 			elif port == "BACK_RIGHT":
 				if '14101' in ad:
 					addr = ad
+
+	if addr == "INVALID":
+		print(f"Failed to find requested address at location '{port}'")
+		exit()
+
 	dev = rm.open_resource(addr, baud_rate = 115200)
+	# dev = rm.open_resource(addr)
 	# dev.baud_rate = 115200
 except Exception as e:
-	print("Failed to open device")
+	print(f"Failed to open device at address '{addr}'")
 	print(str(e))
 	exit()
 # dev.timeout = 25e3 #Timeout in ms
