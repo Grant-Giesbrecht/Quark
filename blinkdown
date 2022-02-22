@@ -23,7 +23,7 @@ compare = False
 argv = sys.argv[1:]
 
 try:
-	opts, args = getopt.getopt(argv,"hc:o:la:", [])
+	opts, args = getopt.getopt(argv,"hc:o:la:s", [])
 except getopt.GetoptError:
 	print("blinkdown -o <filename>		(Use -h for help)")
 	sys.exit(2)
@@ -45,12 +45,16 @@ for opt, arg in opts:
 		print("  -c  Specify comparison MCB file. Will read lines found in this file")
 		print("      and check if flash memory agrees. Cannot be used with -l flag.")
 		print("  -a  Show addresses")
+		print("  -s  Save downlink to file. (Automatically set with -o)")
 		sys.exit()
 	if opt == '-c':
 		compare = True
 		comp_file = arg
 	elif opt in ("-o"):
 		filename = arg
+		save_outfile = True
+	elif opt in ("-s"):
+		save_outfile = True
 	elif opt in ("-l"):
 		try:
 			readlength = int(arg)
@@ -232,8 +236,10 @@ def main():
 
 
 	print("\n\nRead complete")
-	print(f"\nSaving file {filename}")
-	save_to_file(filename)
+
+	if save_outfile:
+		print(f"\nSaving file {filename}")
+		save_to_file(filename)
 
 	# Compare received data to comparison file if specified
 	if compare:
