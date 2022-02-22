@@ -1,10 +1,39 @@
+#!/usr/local/bin/python3
+
 import pyvisa as pv
 import time
+import sys, getopt
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta.bcm"
 filename = "../ISVs/blinkenrechner.lut"
 # filename = "./linktest.lut"
 lines_per_batch = 512
+show_addresses = False
+
+argv = sys.argv[1:]
+
+try:
+	opts, args = getopt.getopt(argv,"hi:a", [])
+except getopt.GetoptError:
+	print("blinkup -i <filename>		(Use -h for help)")
+	sys.exit(2)
+for opt, arg in opts:
+	if opt == '-h':
+		print("Blinkenrechner Project Flash Uploader")
+		print("")
+		print("Usage:")
+		print("  blinkup <filename>")
+		# print("  blinkdown ... -i <out_file>")
+		print("  blinkup ... -h")
+		print("  blinkup ... -a")
+		print("")
+		print("Description")
+		# print("  -o  File to upload")
+		print("  -h  Show help")
+		print("  -a  Show addresses")
+		sys.exit()
+	elif opt == "-a":
+		show_addresses = True
 
 t_upload = []
 t_write = []
@@ -13,13 +42,20 @@ port = "BACK_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, F
 
 #Open connection to Arduino
 rm = pv.ResourceManager()
+addr = "INVALID"
 try:
-
+	addr_list = rm.list_resources()
+	if show_addresses:
+		print("Detected Addresses:")
+		for ad in addr_list:
+			print(f"\t{ad}")
+		print("")
 	if port == "FIRST":
-		addr_list = rm.list_resources()[1]
+		for ad in addr_list:
+			if not ("BLTH"  in ad or "tooth" in ad):
+				addr = ad
+		# addr = rm.list_resources()[1]
 	else:
-		addr_list = rm.list_resources()
-		addr = "INVALID"
 		for ad in addr_list:
 			if port == "BACK_LEFT":
 				if '14401' in ad:
@@ -33,10 +69,16 @@ try:
 			elif port == "BACK_RIGHT":
 				if '14101' in ad:
 					addr = ad
+
+	if addr == "INVALID":
+		print(f"Failed to find requested address at location '{port}'")
+		exit()
+
 	dev = rm.open_resource(addr, baud_rate = 115200)
+	# dev = rm.open_resource(addr)
 	# dev.baud_rate = 115200
 except Exception as e:
-	print("Failed to open device")
+	print(f"Failed to open device at address '{addr}'")
 	print(str(e))
 	exit()
 # dev.timeout = 25e3 #Timeout in ms
