@@ -17,5 +17,5 @@ qmm: qmm.cpp subatomic.hpp
 # qlexer: quarklexer.cpp subatomic.hpp quark_types.hpp
 # 	$(CC) -o qlexer quarklexer.cpp $(LIBS)
 
-quark: quark.cpp quarklexer.hpp quarkparser.hpp subatomic.hpp quark_types.hpp
+quark: quark.cpp quarklexer.hpp quarkparser.hpp subatomic.hpp quark_types.hpp data_types.hpp
 	$(CC) -o quark quark.cpp $(LIBS)
