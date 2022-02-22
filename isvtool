@@ -1,0 +1,16 @@
+#!/usr/local/bin/python3
+
+from colorama import Fore, Style
+from link.file_io import *
+
+# Read quark configuration
+conf = dict()
+status = load_conf("/Users/grantgiesbrecht/Documents/GitHub/Quark/quark.conf", conf)
+if status == 0:
+	print(f"{Fore.RED}ERROR: Failed to find quark.conf{Style.RESET_ALL}")
+
+# Scan ISV Archive
+all_isv = get_all_ISV(conf["Archive_Dir"])
+
+# Show archive contents
+show_ISVs(all_isv)
