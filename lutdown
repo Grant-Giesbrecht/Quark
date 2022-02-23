@@ -74,6 +74,7 @@ for opt, arg in opts:
 		comp_file = arg
 	elif opt in ("-C"):
 		isv_menu = True
+		comp_file = arg
 	elif opt in ("-s"):
 		save_outfile = True
 	elif opt in ("-o"):
@@ -99,10 +100,11 @@ if isv_menu:
 	all_isv = get_all_ISV(conf["Archive_Dir"])
 
 	# Run selector menu
-	ver = get_isv_menu(all_isv)
+	series_name, ver_tuple = get_isv_menu(all_isv)
 
-
-
+	# Get full path to comparison file
+	comp_file = full_path_lut(conf["Archive_Dir"], series_name, ver_tuple)
+	print(f"Comparing to LUT file at path:\n\t{Fore.BLUE}{comp_file}{Style.RESET_ALL}")
 
 #Open connection to Arduino
 rm = pv.ResourceManager()
