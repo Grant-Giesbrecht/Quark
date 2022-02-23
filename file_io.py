@@ -121,8 +121,8 @@ def show_ISVs(all_isv):
 			print(f"\t{maj}.{min}.{patch}")
 
 # Takes a dict of ISVs (as created by get_all_ISV), and runs a menu to prompt the
-# user through selecting one. Returns a string for the selected versions directory
-# name, or "" if no version can be selected (empty archive).
+# user through selecting one. Returns a tuple w/ series name and version tuple for the selected versions directory
+# name, or None if no version can be selected (empty archive).
 #
 def get_isv_menu(all_isv):
 
@@ -142,7 +142,7 @@ def get_isv_menu(all_isv):
 		print(f"Selected only available series: {Fore.BLUE}{k}{Style.RESET_ALL}")
 	elif len(k) == 0: # ABort
 		print(f"{Fore.RED}ERROR: Archive is empty{Style.RESET_ALL}")
-		return ""
+		return None
 	else: # Run menu
 
 		while True:
@@ -192,4 +192,34 @@ def get_isv_menu(all_isv):
 		else:
 			continue
 
-	return ver
+	return (k, (maj, min, patch))
+
+# Accepts path to archive, series name, version tuple and returns full path to
+# the LUT file. Returns "" if cannot find/doesnt exist.
+#
+#
+def full_path_lut(archive_path, series, version):
+
+	maj = version[0]
+	min = version[1]
+	patch = version[2]
+
+	ver_name = f"{series}_{maj}_{min}_{patch}"
+
+	ver_path = os.path.join(archive_path, ver_name)
+
+	# Get contents
+	try:
+		cont = os.listdir(ver_path)
+	except:
+		return ""
+
+	fn = ""
+	for item in cont:
+		if item.endswith(".lut") or item.endswith(".LUT"):
+			if len(fn) > 0:
+				print(f"{Fore.YELLOW}WARNING: Multiple matching LUT files found{Style.RESET_ALL}")
+				return ""
+			fn = os.path.abspath(os.path.join(ver_path, item))
+
+	return fn
