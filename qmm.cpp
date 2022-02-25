@@ -508,6 +508,7 @@ int main(int argc, char** argv){
 			bpi_out << bpi[pl] << "\n";
 		}
 		bpi_out.close();
+		cout << "Wrote " << gcolor::blue << outfile << gcolor::normal << endl;
 	}
 
 	if (save_bpir){
@@ -517,6 +518,7 @@ int main(int argc, char** argv){
 			bpir_out << bpir[pl] << "\n";
 		}
 		bpir_out.close();
+		cout << "Wrote " << gcolor::blue << outfile_r << gcolor::normal << endl;
 	}
 
 
