@@ -12,6 +12,7 @@
 #include <cmath>
 #include <ctgmath>
 #include "subatomic.hpp"
+#include "data_types.hpp"
 
 static_assert( -1 == ~0, "not 2's complement");
 
@@ -69,6 +70,11 @@ typedef struct{
 	size_t addr;
 	size_t len;
 }variable;
+
+typedef struct{
+	size_t start;
+	size_t end;
+}addr_range;
 
 /*
 Convert a qtoken to a string for printing
@@ -172,7 +178,7 @@ public:
 	// Output vector
 	std::vector<abs_line> bpir;
 
-	size_t next_ram_addr; // Next unallocated line in RAM0 for writing program variables
+	// size_t next_ram_addr; // Next unallocated line in RAM0 for writing program variables
 	size_t next_line; // Next empty line in memory pmem for writing program data
 	int compile_status; //0 = good, 1 = compiler error, 2 = data error
 
@@ -192,14 +198,23 @@ public:
 
 	void add(std::string data);
 	void add(std::string data, size_t lnum);
-	size_t addToken(qtoken tok);
+	size_t addToken(qtoken tok, size_t expected_bytes);
 
 	bool hasVar(std::string name);
 	size_t idxVar(std::string name);
 
 	size_t next_ram(size_t num_bytes, std::string useage, std::string name);
+	size_t request_ram(size_t req_addr, size_t num_bytes, std::string useage, std::string name);
 
 	std::string str();
+
+	//Memory Usage
+	std::vector<addr_range> ram_usage;
+	size_t ram_size_bytes; //Not max address, for 4-bit address bus, would be 16, not 15.
+
+	void show_ram_usage();
+	bool mark_ram_used(size_t addr, size_t len);
+	bool check_ram_avail(size_t addr, size_t len);
 
 	// Low Level Settings
 	int true_val;
@@ -267,7 +282,7 @@ CompilerState::CompilerState(InstructionSet is, GLogger& log, language_specs ls)
 	CompilerState::log = log;
 	CompilerState::lang = ls;
 
-	next_ram_addr = 0;
+	// next_ram_addr = 0;
 	next_line = 0;
 	compile_status = 0;
 
@@ -287,6 +302,8 @@ CompilerState::CompilerState(InstructionSet is, GLogger& log, language_specs ls)
 	isv_minor = -1;
 	isv_patch = -1;
 	isv_exact_match = false;
+
+	ram_size_bytes = 65536;
 }
 
 /*
@@ -304,6 +321,14 @@ Adds a token to the BPIR vector. Similar to 'add()', except by accepting tokens,
 it can accept variables (type=id) which will have 2-byte addresses and thus couldn't
 be added in a single call to 'add()'.
 
+expected_bytes represents the size of numeric types, the final number is expected to fit within that many
+bytes. This is used for machine code instructions, so an address like '1' would
+be represented as 2 bytes instead of 1. It can also be used to error check. It is
+not used by 'id' tokens. Values of expected_bytes can be 1, 2, or 4.
+
+Error checking done outside of function by verifying returned
+value matches expected_bytes.
+
 tok: Token of type 'num' or 'id'. Tokens of type 'num' must have 8-bit data
      representing a value to place on a single line of the BPIR vector. Tokens
 	 of type 'id' must have a 16-bit address which will be saved over 2 lines.
@@ -311,11 +336,27 @@ tok: Token of type 'num' or 'id'. Tokens of type 'num' must have 8-bit data
 
 Returns number of bytes added.
 */
-size_t CompilerState::addToken(qtoken tok){
+size_t CompilerState::addToken(qtoken tok, size_t expected_bytes){
 
 	if (tok.type == num){ // Save numeric literal
-		add(tokenvalstr(tok, *this));
-		return 1;
+		if (expected_bytes == 2){
+			uint32_t full_value = tok.vali; // Create base value
+			uint32_t mask8 = 255; // Create mask
+			add(to_string( full_value & mask8) ); // Add byte 0
+			add(to_string( full_value & (mask8 << 8) )); // Add byte 1
+			return 2;
+		}else if(expected_bytes == 4){
+			uint32_t full_value = tok.vali; // Create base value
+			uint32_t mask8 = 255; // Create mask
+			add(to_string( full_value & mask8) ); // Add byte 0
+			add(to_string( full_value & (mask8 << 8) )); // Add byte 1
+			add(to_string( full_value & (mask8 << 16) )); // Add byte 2
+			add(to_string( full_value & (mask8 << 24) )); // Add byte 3
+			return 4;
+		}else{ // Size is 1
+			add(tokenvalstr(tok, *this));
+			return 1;
+		}
 	}else if(tok.type == id){ //Dereference variables
 
 		uint32_t full_value = tok.vali; // Create base value
@@ -401,17 +442,185 @@ size_t CompilerState::idxVar(std::string name){
 }
 
 /*
-Gets the next unallocated address in RAM, returns it, and marks the next
-'num_bytes' as used.
+Prints a summary of used addresses in RAM (according to ram_usage)
+*/
+void CompilerState::show_ram_usage(){
+
+	cout << "RAM Usage:" << endl;
+	for (size_t i = 0 ; i < ram_usage.size() ; i++){
+		cout << "\t[" << ram_usage[i].start << ":" << ram_usage[i].end << "]" << endl;
+	}
+
+}
+
+/*
+Marks 'len' addresses, starting at 'addr' as occupied. If any bytes overlap with
+used addresses, it will return false and not mark as used. Else, returns true.
+
+Possible placements:
+[50:100] 110:114
+[0:10] 11:14 [50:100] adjacent_e
+[0:10] 45:49 [50:100] adjacent_s
+[0:10] 20:24 [50:100] new_block
+[0:10]  9:13 [50:100] overlap   <-- this will trigger an error
+*/
+bool CompilerState::mark_ram_used(size_t addr, size_t len){
+
+	// Verify RAM is available
+	if (!check_ram_avail(addr, len)){
+		return false;
+	}
+
+	// Scan over all usage blocks
+	for (size_t i = 0 ; i <= ram_usage.size() ; i++){
+		// cout << "\t" << i << " " << ram_usage.size() << endl;
+		// Check fencepost case
+		if (i == ram_usage.size()){
+
+			// cout << "\tfencepost" << endl;
+
+			if (i != 0 && ram_usage[i-1].end+1 == addr){ // Check if adjacent to previous block
+				ram_usage[i-1].end = addr+len-1; //Extend previous block
+				return true;
+			}else{ //Create new block
+				// cout << "\tnew" << endl;
+				addr_range np;
+				np.start = addr;
+				np.end = addr+len-1;
+				ram_usage.push_back(np);
+				return true;
+			}
+
+		}
+
+		// if (i != 0 && ram_usage[i-1].end )
+		// cout << addr << " " << ram_usage[i].start << endl;
+		if (addr < ram_usage[i].start){ // Place new block before this block (or modify block start if adjacent)
+			// cout << "\tsandwich" << endl;
+			if (i != 0 && ram_usage[i].start == addr+len){ // Check if adjacent to next block
+				ram_usage[i].start = addr; //Extend previous block
+				return true;
+			}else{ //Create new block
+				// cout << "\t\tnew" << endl;
+				addr_range np;
+				np.start = addr;
+				np.end = addr+len-1;
+				ram_usage.insert(ram_usage.begin()+i, np);
+				return true;
+			}
+
+		}
+
+
+	}
+
+	return false;
+}
+
+/*
+Checks if 'len' bytes, starting at 'addr' are available. Returns true if all are
+unused, returns false otherwise.
+*/
+bool CompilerState::check_ram_avail(size_t addr, size_t len){
+
+	// Get list of all bytes to check
+	vector<size_t> all_bytes;
+	for(size_t b = 0 ; b < len ; b++){
+		all_bytes.push_back(addr+b);
+	}
+
+	//Check all bytes
+	for (size_t b = 0 ; b < all_bytes.size() ; b++){
+
+		// AT all usage blocks
+		for (size_t i = 0 ; i < ram_usage.size() ; i++){
+			// Check for collision
+			if (all_bytes[b] >= ram_usage[i].start && all_bytes[b] <= ram_usage[i].end) return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+Attempts to allocated the requested number of bytes at the requested addresses. If
+not available, returns an address from next_ram(). The first address of the allocaed
+memory is returned. This can be compared to the req_addr by the calling code if
+a status check is desired.
+*/
+size_t CompilerState::request_ram(size_t req_addr, size_t num_bytes, std::string useage, std::string name){
+
+	// Could save name and usage later if interested in making a RAM usage map
+
+	// Check if the requested address/size is available
+	if (check_ram_avail(req_addr, num_bytes)){
+
+		// Mark block as used
+		if (!mark_ram_used(req_addr, num_bytes)){
+			// cout << "ERROR: Expected available memory was unaccessible (addr:" << req_addr << ", len: " << num_bytes << ")" << endl;
+			throw std::logic_error("ERROR: Expected available memory was unaccessible (addr:" + to_hexstring(req_addr) + ", len: " + to_string(num_bytes) + ")");
+		}
+
+		// Return block address
+		return req_addr;
+	}
+
+	// Return next available address
+	return next_ram(num_bytes, useage, name);
+
+}
+
+/*
+Gets the next unallocated address in RAM, returns it, and marks it as used.
+
+If no more memory available, returns string::npos;
 */
 size_t CompilerState::next_ram(size_t num_bytes, std::string useage, std::string name){
 
 	// Could save name and usage later if interested in making a RAM usage map
 
-	size_t addr = next_ram_addr;
-	next_ram_addr += num_bytes;
+	// Next address that might be open (prior is known unavailable)
+	size_t next_check = 0;
 
-	return addr;
+	// Scan over all usage blocks
+	for (size_t i = 0 ; i < ram_usage.size() ; i++){
+
+		//Check if next_check through start of occupied block is big enough
+		if (ram_usage[i].start-next_check >= num_bytes){
+
+			// Mark block as used
+			if (!mark_ram_used(next_check, num_bytes)){
+				// cout << "ERROR: Expected available memory was unaccessible (addr:" << req_addr << ", len: " << num_bytes << ")" << endl;
+				throw std::logic_error("ERROR: Expected available memory was unaccessible (addr:" + to_hexstring(next_check) + ", len: " + to_string(num_bytes) + ")");
+			}
+
+			// Return block address
+			return next_check;
+
+		}else{ // Otherwise mark next_check as byte after this block
+			next_check = ram_usage[i].end+1;
+		}
+
+	}
+
+	//Fencepost case - check if remaining space is sufficient
+	if (ram_size_bytes-next_check){
+
+		// Mark block as used
+		if (!mark_ram_used(next_check, num_bytes)){
+			// cout << "ERROR: Expected available memory was unaccessible (addr:" << req_addr << ", len: " << num_bytes << ")" << endl;
+			throw std::logic_error("ERROR: Expected available memory was unaccessible (addr:" + to_hexstring(next_check) + ", len: " + to_string(num_bytes) + ")");
+		}
+
+		// Return block address
+		return next_check;
+
+	}else{ // No more memory available!
+
+		// Return nichts
+		return std::string::npos;
+	}
+
 
 }
 
@@ -527,7 +736,7 @@ can be replaced with the variable's address.
 
 If the declaration statement initializes the variable with a value, the exact same
 behavior outline for non-initialized varaibles occurs, however an instruction is
-added to the output progra (via the cs.add() function) which instructs a specific
+added to the output program (via the cs.add() function) which instructs a specific
 data value (ie. the initial value) to be written to the address assigned to the
 variable.
 
@@ -549,7 +758,7 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		return state;
 	}
 	qtoken var_id = src[1];
-	data_string = "[var-name: " + dc + var_id.str +  gn +"]";
+	data_string = "("+lc+"type"+gn+":" +dc+ var_type.str +gn + ") ("+lc+"var-name"+gn+": " + dc + var_id.str +  gn +")";
 
 	// Check for semicolon
 	if (!(src[src.size()-1].type == sep && src[src.size()-1].str == ";")){
@@ -629,6 +838,8 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 
 	// Create data bytes based on variable type specified in declaration
 	vector<int> var_bytes;
+	string init_val;
+	variable nv;
 	if (var_type.str.compare("uint") == 0 || var_type.str.compare("uint8") == 0 || var_type.str.compare("type") == 0 || var_type.str.compare("type8") == 0){
 		// This is for all types initialized with an 8-bit unsigned integer
 
@@ -658,17 +869,32 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		// Set value
 		if (has_value){
 			var_bytes.push_back(var_val.vali);
+			init_val = to_string(var_val.vali);
 		}else{
 			var_bytes.push_back(0);
+			init_val = "0";
 		}
 
 		// Create variable object
-		variable nv;
 		nv.id = var_id.str;
 		nv.type = var_type.str;
 		nv.len = 1;
-		nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		if (addr_requested){
+			// Get an address from the memory allocator
+			nv.addr = cs.request_ram(addr.vali, nv.len, "var", nv.id);
+			if (nv.addr != addr.vali){
+				log.lwarning("Variable '"+nv.id+"' was denied requested access to address " + to_hexstring(addr.vali) + ", assigned instead " + to_hexstring(nv.addr) , src[0].lnum);
+			}
+		}else{
+			nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		}
 		cs.vars.push_back(nv);
+
+		// Check for out of memory
+		if (nv.addr == std::string::npos){
+			log.lerror("Out of random-access memory on target machine", src[0].lnum, true);
+			return false;
+		}
 
 
 	}else if (var_type.str.compare("float8") == 0){
@@ -679,47 +905,55 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 	}else if (var_type.str.compare("addr") == 0 || var_type.str.compare("addr16") == 0 || var_type.str.compare("type16") == 0 || var_type.str.compare("uint16") == 0){
 		// This is for all types initialized from a 16 bit unsigned integer
 
-		// Check literal type
-		if (has_value && var_val.type != num){
-			log.lerror("Variables of type '" + var_type.str + "' can only be initialized with numeric tokens." , src[0].lnum);
-			state = false;
-			return state;
-		}
 
-		// Check that numeric type is an integer
-		if (has_value && var_val.use_float){
-			log.lerror("Variables of type '" + var_type.str + "' can only be initialized with integer literals." , src[0].lnum);
-			state = false;
-			return state;
-		}
-
-		// Check maximum value
-		int maxval = 65535; // From 2^16-1
-		int minval = 0;
-		if (has_value && (var_val.vali > maxval || var_val.vali < minval)){
-			log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [" + to_string(minval) + ", " + to_string(maxval) + "]." , src[0].lnum);
-			state = false;
-			return state;
-		}
 
 		// Set value
 		if (has_value){
-			uint32_t full_value = var_val.vali;
-			uint32_t mask8 = 255;
-			var_bytes.push_back(full_value & mask8);
-			var_bytes.push_back(full_value & (mask8 << 8));
+
+			// Check literal type
+			if (var_val.type != num){
+				log.lerror("Variables of type '" + var_type.str + "' can only be initialized with numeric tokens." , src[0].lnum);
+				state = false;
+				return state;
+			}
+
+			// Check that numeric type is an integer
+			if (var_val.use_float){
+				log.lerror("Variables of type '" + var_type.str + "' can only be initialized with integer literals." , src[0].lnum);
+				state = false;
+				return state;
+			}
+
+			if (!uint16_bytes(var_val.vali, var_bytes)){
+				log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [0, 65535]." , src[0].lnum);
+			}
+			init_val = to_string(var_val.vali);
 		}else{
 			var_bytes.push_back(0);
 			var_bytes.push_back(0);
+			init_val = "0";
 		}
 
 		// Create variable object
-		variable nv;
 		nv.id = var_id.str;
 		nv.type = var_type.str;
 		nv.len = 2;
-		nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		if (addr_requested){
+			// Get an address from the memory allocator
+			nv.addr = cs.request_ram(addr.vali, nv.len, "var", nv.id);
+			if (nv.addr != addr.vali){
+				log.lwarning("Variable '"+nv.id+"' was denied requested access to address " + to_hexstring(addr.vali) + ", assigned instead " + to_hexstring(nv.addr) , src[0].lnum);
+			}
+		}else{
+			nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		}
 		cs.vars.push_back(nv);
+
+		// Check for out of memory
+		if (nv.addr == std::string::npos){
+			log.lerror("Out of random-access memory on target machine", src[0].lnum, true);
+			return false;
+		}
 
 	}else if (var_type.str.compare("bool") == 0){
 
@@ -741,23 +975,41 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		if (has_value){
 			if (var_val.str.compare("false")){
 				var_bytes.push_back(cs.false_val);
+				init_val = "false";
 			}else{
 				var_bytes.push_back(cs.true_val);
+				init_val = "true";
 			}
 		}else{
-			var_bytes.push_back(0);
+			var_bytes.push_back(cs.false_val);
+			init_val = "false";
 		}
 
 		// Create variable object
-		variable nv;
 		nv.id = var_id.str;
 		nv.type = var_type.str;
 		nv.len = 1;
-		nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		if (addr_requested){
+			// Get an address from the memory allocator
+			nv.addr = cs.request_ram(addr.vali, nv.len, "var", nv.id);
+			if (nv.addr != addr.vali){
+				log.lwarning("Variable '"+nv.id+"' was denied requested access to address " + to_hexstring(addr.vali) + ", assigned instead " + to_hexstring(nv.addr) , src[0].lnum);
+			}
+		}else{
+			nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		}
 		cs.vars.push_back(nv);
+
+		// Check for out of memory
+		if (nv.addr == std::string::npos){
+			log.lerror("Out of random-access memory on target machine", src[0].lnum, true);
+			return false;
+		}
 
 	}else if (var_type.str.compare("int") == 0 || var_type.str.compare("int8") == 0){
 		// This is for all types initialized from an 8 bit signed integer
+
+		trouble("A");
 
 		// Check literal type
 		if (has_value && var_val.type != num){
@@ -782,81 +1034,109 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 			return state;
 		}
 
+		trouble("B");
+
 		// Set value
 		if (has_value){
-			uint8_t full_value = var_val.vali;
-			uint32_t mask8 = 255;
-			var_bytes.push_back(-full_value);
+			if (!int8_bytes(var_val.vali, var_bytes)){
+				log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [-128, 127]." , src[0].lnum);
+			}
+			init_val = to_string(var_val.vali);
 		}else{
 			var_bytes.push_back(0);
-			var_bytes.push_back(0);
-			var_bytes.push_back(0);
-			var_bytes.push_back(0);
+			init_val = "0";
 		}
 
+		trouble("C");
+
 		// Create variable object
-		variable nv;
 		nv.id = var_id.str;
 		nv.type = var_type.str;
-		nv.len = 2;
-		nv.addr = cs.next_ram(nv.len, "var", nv.id);
-
+		nv.len = 1;
+		if (addr_requested){
+			// Get an address from the memory allocator
+			nv.addr = cs.request_ram(addr.vali, nv.len, "var", nv.id);
+			if (nv.addr != addr.vali){
+				log.lwarning("Variable '"+nv.id+"' was denied requested access to address " + to_hexstring(addr.vali) + ", assigned instead " + to_hexstring(nv.addr) , src[0].lnum);
+			}
+		}else{
+			trouble("D");
+			nv.addr = cs.next_ram(nv.len, "var", nv.id);
+			trouble("E");
+		}
 		cs.vars.push_back(nv);
+
+		// Check for out of memory
+		if (nv.addr == std::string::npos){
+			log.lerror("Out of random-access memory on target machine", src[0].lnum, true);
+			return false;
+		}
+
+		trouble("F");
+
 	}else if (var_type.str.compare("int32") == 0){
-		// This is for all types initialized from a 16 bit unsigned integer
-
-		// Check literal type
-		if (has_value && var_val.type != num){
-			log.lerror("Variables of type '" + var_type.str + "' can only be initialized with numeric tokens." , src[0].lnum);
-			state = false;
-			return state;
-		}
-
-		// Check that numeric type is an integer
-		if (has_value && var_val.use_float){
-			log.lerror("Variables of type '" + var_type.str + "' can only be initialized with integer literals." , src[0].lnum);
-			state = false;
-			return state;
-		}
-
-		// Check maximum value
-		long maxval = 4294967295; // From 2^16-1 TODO: Is changing int to long a problem
-		int minval = 0;
-		if (has_value && (var_val.vali > maxval || var_val.vali < minval)){
-			log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [" + to_string(minval) + ", " + to_string(maxval) + "]." , src[0].lnum);
-			state = false;
-			return state;
-		}
+		// This is for all types initialized from a 16 bit signed integer
 
 		// Set value
 		if (has_value){
-			uint32_t full_value = var_val.vali;
-			uint32_t mask8 = 255;
-			// var_bytes.push_back(full_value & mask);
-			// var_bytes.push_back(full_value & (mask << 8));
-			// var_bytes.push_back(full_value & (mask << 16));
-			// var_bytes.push_back(full_value & (mask << 24));
+
+			// Check literal type
+			if (var_val.type != num){
+				log.lerror("Variables of type '" + var_type.str + "' can only be initialized with numeric tokens." , src[0].lnum);
+				state = false;
+				return state;
+			}
+
+			// Check that numeric type is an integer
+			if (var_val.use_float){
+				log.lerror("Variables of type '" + var_type.str + "' can only be initialized with integer literals." , src[0].lnum);
+				state = false;
+				return state;
+			}
+
+			if (!int32_bytes(var_val.vali, var_bytes)){
+				log.lerror("Variable of type '" + var_type.str + "' initialized with value outside of range [0, 65535]." , src[0].lnum);
+			}
+			init_val = to_string(var_val.vali);
 		}else{
 			var_bytes.push_back(0);
 			var_bytes.push_back(0);
 			var_bytes.push_back(0);
 			var_bytes.push_back(0);
+			init_val = "0";
 		}
 
 		// Create variable object
-		variable nv;
+
 		nv.id = var_id.str;
 		nv.type = var_type.str;
-		nv.len = 2;
-		nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		nv.len = 4;
+		if (addr_requested){
+			// Get an address from the memory allocator
+			nv.addr = cs.request_ram(addr.vali, nv.len, "var", nv.id);
+			if (nv.addr != addr.vali){
+				log.lwarning("Variable '"+nv.id+"' was denied requested access to address " + to_hexstring(addr.vali) + ", assigned instead " + to_hexstring(nv.addr) , src[0].lnum);
+			}
+		}else{
+			nv.addr = cs.next_ram(nv.len, "var", nv.id);
+		}
 		cs.vars.push_back(nv);
+
+		// Check for out of memory
+		if (nv.addr == std::string::npos){
+			log.lerror("Out of random-access memory on target machine", src[0].lnum, true);
+			return false;
+		}
 
 	}else if (var_type.str.compare("float") == 0 || var_type.str.compare("float32") == 0){
 
 	// }else if (){
+		cout << "\tNot immplemented!" << endl;
+		init_val = "not-implemented";
 
 	}else if (var_type.str.compare("type32") == 0){
-
+		cout << "\tNot immplemented!" << endl;
+		init_val = "not-implemented";
 	}else{
 		log.lerror("Unrecognized type '" + var_type.str + "'", var_type.lnum);
 		state = false;
@@ -865,18 +1145,24 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 
 	// Check for initial value size mismatch
 	if (var_bytes.size() != cs.vars[cs.vars.size()-1].len){
-		log.lerror("Error in 'quark_types.hpp', Statement::exec_declaration. Size of 'var_bytes' does not match variable size. The variable's initial value is incorrectly initialized.", var_type.lnum);
+		log.lerror("Error in 'quark_types.hpp', Statement::exec_declaration. Size of 'var_bytes' ("+to_string(var_bytes.size())+") does not match variable size ("+to_string(cs.vars[cs.vars.size()-1].len)+"). The variable's initial value is incorrectly initialized.", var_type.lnum);
 		state = false;
 		return state;
 	}
+
+	// Mark statement as executed, print via data_string
+	was_executed = true;
 
 	// If no initial value provided...
 	if (!has_value){
 		// Skip initialization instruction
 		if (cs.skip_default_init){
+			data_string = data_string + " ("+lc+"init-val"+gn+": "+dc+"none"+gn+") ("+lc+"addr"+gn+": "+dc+to_string(nv.addr)+gn+")";
 			return state;
 		}
 	}
+
+	data_string = data_string + " ("+lc+"init-val"+gn+": "+dc+init_val+gn+") ("+lc+"addr"+gn+": "+dc+to_string(nv.addr)+gn+")";
 
 	// For each byte in variable, tell program to allocate space in RAM
 	for (size_t b = 0 ; b < var_bytes.size() ; b++){
@@ -894,8 +1180,7 @@ bool Statement::exec_declaration(CompilerState& cs, GLogger& log){
 		// cs.add();
 	}
 
-	// Mark statement as executed, print via data_string
-	was_executed = true;
+
 
 	return state;
 
@@ -933,7 +1218,8 @@ bool Statement::exec_machine_code(CompilerState& cs, GLogger& log){
 	// Next element of line is all data bits
 	size_t num_bits = 0;
 	for (size_t i = 0 ; i < data_tokens.size() ; i++){
-		num_bits += cs.addToken(data_tokens[i]);
+		// Add token and specify expected size (ie. so address < 256 would be represented as 2 bytes)
+		num_bits += cs.addToken(data_tokens[i], cs.is.ops[instruction.str].data_bits);
 	}
 
 	// Error check instruction - Correct number of bits
