@@ -42,7 +42,7 @@ isv_menu = False
 argv = sys.argv[1:]
 
 try:
-	opts, args = getopt.getopt(argv,"hc:o:la:sCv", [])
+	opts, args = getopt.getopt(argv,"hc:o:la:sm", [])
 except getopt.GetoptError:
 	print("blinkdown -o <filename>		(Use -h for help)")
 	sys.exit(2)
@@ -55,7 +55,7 @@ for opt, arg in opts:
 		print("  lutdown ... -l <read length>")
 		print("  lutdown ... -h")
 		print("  lutdown ... -c <compare_file>")
-		print("  lutdown ... -C")
+		print("  lutdown ... -m")
 		print("  lutdown ... -a")
 		print("  lutdown ... -s")
 		print("")
@@ -65,16 +65,17 @@ for opt, arg in opts:
 		print("  -h  Show help")
 		print("  -c  Specify comparison MCB file. Will read lines found in this file")
 		print("      and check if flash memory agrees. Cannot be used with -l flag.")
-		print("  -C  Compare, prompting menu to select ISV to compare with from the archive.")
+		print("  -m  Compare, prompting menu to select ISV to compare with from the archive.")
 		print("  -a  Show addresses")
 		print("  -s  Save downlink to file. (Automatically set with -o)")
 		sys.exit()
 	if opt == '-c':
 		compare = True
 		comp_file = arg
-	elif opt in ("-C"):
+	elif opt in ("-m"):
 		isv_menu = True
 		comp_file = arg
+		compare = True
 	elif opt in ("-s"):
 		save_outfile = True
 	elif opt in ("-o"):
