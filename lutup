@@ -3,42 +3,66 @@
 import pyvisa as pv
 import time
 import sys, getopt
+from file_io import *
 
 # filename = "../Blinkenmatrix/opfiles/memorydelta.bcm"
-filename = "../ISVs/blinkenrechner.lut"
+filename = ""
 # filename = "./linktest.lut"
 lines_per_batch = 512
 show_addresses = False
+isv_menu = True
 
 argv = sys.argv[1:]
 
 try:
 	opts, args = getopt.getopt(argv,"hi:a", [])
 except getopt.GetoptError:
-	print("blinkup -i <filename>		(Use -h for help)")
+	print("lutup 			(Use -h for help)")
 	sys.exit(2)
 for opt, arg in opts:
 	if opt == '-h':
 		print("Blinkenrechner Project Flash Uploader")
 		print("")
 		print("Usage:")
-		print("  blinkup <filename>")
-		# print("  blinkdown ... -i <out_file>")
+		print("  blinkup ")
+		print("  blinkup ... -i <file>")
 		print("  blinkup ... -h")
 		print("  blinkup ... -a")
 		print("")
 		print("Description")
-		# print("  -o  File to upload")
+		print("  -i  File to upload. If not specified, menu to select version from archive")
+		print("      will be run.")
 		print("  -h  Show help")
 		print("  -a  Show addresses")
 		sys.exit()
+	elif opt == "-i":
+		filename = arg
+		isv_menu = False
 	elif opt == "-a":
 		show_addresses = True
+
+# Open ISV menu if prompted
+if isv_menu:
+	# Read quark configuration
+	conf = dict()
+	status = load_conf("/Users/grantgiesbrecht/Documents/GitHub/Quark/quark.conf", conf)
+	if status == 0:
+		print(f"{Fore.RED}ERROR: Failed to find quark.conf{Style.RESET_ALL}")
+
+	# Scan ISV Archive
+	all_isv = get_all_ISV(conf["Archive_Dir"])
+
+	# Run selector menu
+	series_name, ver_tuple = get_isv_menu(all_isv)
+
+	# Get full path to comparison file
+	filename = full_path_lut(conf["Archive_Dir"], series_name, ver_tuple)
+	print(f"Uploading LUT file at path:\n\t{Fore.BLUE}{filename}{Style.RESET_ALL}")
 
 t_upload = []
 t_write = []
 
-port = "BACK_LEFT"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
+port = "FIRST"; # Options: BACK_LEFT, FRONT_LEFT, BACK_RIGHT, FRONT_RIGHT, FIRST
 
 #Open connection to Arduino
 rm = pv.ResourceManager()
