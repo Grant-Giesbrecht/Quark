@@ -164,7 +164,8 @@
 ? Jump to a specific line
 #REPL FETCH_
 #REPL GET_16b_ADDR_
-10: _REG_AA_OE _WRITE_PC PHI_RESET
+10: _REG_AA_OE
+11: _REG_AA_OE _WRITE_PC PHI_RESET
 
 * RBS 18 0
 ? Right bit shift
