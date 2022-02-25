@@ -19,3 +19,6 @@ qmm: qmm.cpp subatomic.hpp
 
 quark: quark.cpp quarklexer.hpp quarkparser.hpp subatomic.hpp quark_types.hpp data_types.hpp
 	$(CC) -o quark quark.cpp $(LIBS)
+
+alloc_test: ram_alloc_test.cpp quarklexer.hpp quarkparser.hpp subatomic.hpp quark_types.hpp data_types.hpp
+	$(CC) -o alloc_test ram_alloc_test.cpp $(LIBS)
