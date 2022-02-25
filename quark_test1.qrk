@@ -2,14 +2,20 @@
 #SERIES Proto
 #ISV 2.1.0
 
+// Optional directives below, required above
+#PMEM FLASH0
+#TRUEVAL 1
+#FALSEVAL 0
+
 int z;
-int x = 7;
+int x = 7   @ &x = 1400;
 int32 y = 9 @ &y = 1401;
 
-PMEM_REGA 1400;
-PMEM_REGB 1401;
+RAM0_REGA 1400;
+RAM0_REGB 1401;
 ADD;
 REGC_SYSREG;
+RAM0_REGA y;
 
 if (zero){
 	RAM_REGA 1402;
