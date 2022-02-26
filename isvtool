@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
 from colorama import Fore, Style
-from link.file_io import *
+from file_io import *
 
 # Read quark configuration
 conf = dict()
