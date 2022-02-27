@@ -21,6 +21,7 @@ show_addresses = False
 comp_file = ""
 compare = False
 argv = sys.argv[1:]
+save_outfile = False
 
 try:
 	opts, args = getopt.getopt(argv,"hc:o:la:s", [])
