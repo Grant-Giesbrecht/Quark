@@ -758,7 +758,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				isd_repl_block def;
 
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words in '#DEF' block." << endl;
+					COUT_ERROR << gcolor::red << "Too few words in '#DEF' block." << gcolor::normal << endl;
 					return false;
 				}
 
@@ -799,19 +799,19 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 				// Check at least #REPL and replacement block name provided
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words in '#REPL' statement." << endl;
+					COUT_ERROR << gcolor::red << "Too few words in '#REPL' statement." << gcolor::normal << endl;
 					return false;
 				}
 
 				// Check that requirested repl.block exists
 				if (replacements.find(words[1]) == replacements.end()){
-					COUT_ERROR << "#REPL call accessed an undefined block '" << words[1] << "'." << endl;
+					COUT_ERROR << gcolor::red  << "#REPL call accessed an undefined block '" << words[1] << "'." << gcolor::normal << endl;
 					return false;
 				}
 
 				// If block requires arguments, ensure arguments are provided
 				if (words.size() - 2 != replacements[words[1]].num_arg_expect){
-					COUT_ERROR << "'#REPL' statement missing required arguments (" << replacements[words[1]].num_arg_expect << ") for block '" << words[1] << "'." << endl;
+					COUT_ERROR << gcolor::red  << "'#REPL' statement missing required arguments (" << replacements[words[1]].num_arg_expect << ") for block '" << words[1] << "'." << gcolor::normal << endl;
 					return false;
 				}
 
@@ -836,7 +836,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 							// Make sure haven't exceeded argument count
 							if (arg_idx-1 > words.size()){
-								COUT_ERROR << "Too many argument place holders in the block '" << words[1] << "'." << endl;
+								COUT_ERROR << gcolor::red  << "Too many argument place holders in the block '" << words[1] << "'." << gcolor::normal << endl;
 								return false;
 							}
 
@@ -915,7 +915,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 				//Ensure correct number of words
 				if (words.size() < 4){
-					COUT_ERROR << "contains more/less than 4 tokens" << endl;
+					COUT_ERROR << gcolor::red << "contains more/less than 4 tokens" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -924,13 +924,13 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				try{
 					nextOp.instruction_no = stoi(words[2]);
 				}catch(std::invalid_argument){
-					COUT_ERROR << " Failed to convert " << words[2] << " to integer" << endl;
+					COUT_ERROR << gcolor::red  << " Failed to convert " << words[2] << " to integer" << gcolor::normal << endl;
 					return false;
 				}
 				try{
 					nextOp.data_bits = stoi(words[3]);
 				}catch(std::invalid_argument){
-					COUT_ERROR << " Failed to convert " << words[3] << " to integer" << endl;
+					COUT_ERROR << gcolor::red  << " Failed to convert " << words[3] << " to integer" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -949,7 +949,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 			}else if(words[0] == "#PROCESSOR"){
 
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words in '#REPL' statement." << endl;
+					COUT_ERROR << gcolor::red  << "Too few words in '#REPL' statement." << gcolor::normal << endl;
 					return false;
 				}
 
@@ -958,29 +958,29 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				}else if(words[1] == "ALU"){
 					nextOp.subsystem = ALU_OPERATION;
 				}else{
-					COUT_ERROR << "Unrecognized subsystem processor '" << words[1] << "'" << endl;
+					COUT_ERROR << gcolor::red  << "Unrecognized subsystem processor '" << words[1] << "'" << gcolor::normal << endl;
 					return false;
 				}
 
 			}else if (words[0] == "#END"){
 
-				COUT_ERROR << "Extraneous '#END' slipped through!" << endl;
+				COUT_ERROR << gcolor::red  << "Extraneous '#END' slipped through!" << gcolor::normal << endl;
 				return false;
 
 			}else if (words[0] == "#REPL"){
 
-				COUT_ERROR << "Extraneous '#REPL' slipped through!" << endl;
+				COUT_ERROR << gcolor::red  << "Extraneous '#REPL' slipped through!" << gcolor::normal << endl;
 				return false;
 
 			}else if (words[0] == "#DEF"){
 
-				COUT_ERROR << "Extraneous '#DEF' slipped through!" << endl;
+				COUT_ERROR << gcolor::red << "Extraneous '#DEF' slipped through!" << gcolor::normal << endl;
 				return false;
 
 			}else if (words[0] == "#ARCH"){
 
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words" << endl;
+					COUT_ERROR << gcolor::red << "Too few words" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -991,7 +991,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 			}else if (words[0] == "#SERIES"){
 
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words" << endl;
+					COUT_ERROR << gcolor::red << "Too few words" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -1002,7 +1002,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 			}else if (words[0] == "#PRGM"){
 
 				if (words.size() < 2){
-					COUT_ERROR << "Too few words" << endl;
+					COUT_ERROR << gcolor::red << "Too few words" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -1023,13 +1023,13 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 				//Check for fewer than min characters
 				if (words.size() < 2){
-					COUT_ERROR << "Too few characters." << endl;
+					COUT_ERROR << gcolor::red << "Too few characters." << gcolor::normal << endl;
 					return false;
 				}
 
 				//Check for missing colon
 				if (words[1] != ":"){
-					COUT_ERROR << "2nd token (" << words[1] << ") on phase description line must be colon." << endl;
+					COUT_ERROR << gcolor::red << "2nd token (" << words[1] << ") on phase description line must be colon." << gcolor::normal << endl;
 					return false;
 				}
 
@@ -1038,7 +1038,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				try{
 					phase = stoi(words[0]);
 				}catch(std::invalid_argument){
-					COUT_ERROR << "Failed to convert " << words[0] << " to int for phase" << endl;
+					COUT_ERROR << gcolor::red << "Failed to convert " << words[0] << " to int for phase" << gcolor::normal << endl;
 					return false;
 				}
 
@@ -1054,7 +1054,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 						//equals means next is value, if may not be value return false
 						if (!mayBeValue){
-							COUT_ERROR << "Equals appeared when expecting ctrl_line name" << endl;
+							COUT_ERROR << gcolor::red << "Equals appeared when expecting ctrl_line name" << gcolor::normal << endl;
 							return false;
 						}
 
@@ -1067,7 +1067,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 						}else if (to_upper(words[i]) == "OFF"){
 							value = false;
 						}else{
-							COUT_ERROR << "Failed to interpret '" << words[i] << "' as bool. " << endl;
+							COUT_ERROR << gcolor::red << "Failed to interpret '" << words[i] << "' as bool. " << gcolor::normal << endl;
 							return false;
 						}
 						mayBeValue = false;
@@ -1078,7 +1078,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 						if (addToList){
 							int word, pin;
 							if (!get_word_pin(ctrl_name, controls, word, pin)){
-								COUT_ERROR << "Failed to find control line '" << ctrl_name << "'." << endl;
+								COUT_ERROR << gcolor::red << "Failed to find control line '" << ctrl_name << "'." << gcolor::normal << endl;
 								return false;
 							}
 							nextOp.ctrls[phase][word][pin] = value;
@@ -1096,7 +1096,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 				if (addToList){
 					int word, pin;
 					if (!get_word_pin(ctrl_name, controls, word, pin)){
-						COUT_ERROR << "Failed to find control line '" << ctrl_name << "'." << endl;
+						COUT_ERROR << gcolor::red << "Failed to find control line '" << ctrl_name << "'." << gcolor::normal << endl;
 					}
 					nextOp.ctrls[phase][word][pin] = value;
 				}
@@ -1115,7 +1115,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 
 		file.close();
 	}else{
-		cout << "ERROR: Failed to read '" << readfile << "'." << endl;
+		cout << gcolor::red << "ERROR: Failed to read '" << readfile << "'." << gcolor::normal << endl;
 		return false;
 	}
 
@@ -1123,7 +1123,7 @@ isdi - Populates with the file contents, and the replacement blocks. ONly useful
 	output = ops;
 
 	if (!found_arch || !found_series){
-		cout << "ERROR: Missing architecture or series statement." << endl;
+		cout << gcolor::red << "ERROR: Missing architecture or series statement." << gcolor::normal << endl;
 		return false;
 	}
 
@@ -1618,7 +1618,7 @@ void InstructionSet::generate_LUT(bool useBadInstruc){
 			// If all phases reached, either skip remainder or mark as bad instructions
 			if ( phs_no >= numPhase(inst_no) ){
 				if (useBadInstruc){
-					cout << "Bad Instruction not implemented!" << endl;
+					cout << gcolor::yellow << "Bad Instruction not implemented!" << gcolor::normal << endl;
 					log.warning("Bad Instruction requested but *not* implemeented!");
 					useBadInstruc = false; // TODO: remove this when implement bad instruc
 				}else{
