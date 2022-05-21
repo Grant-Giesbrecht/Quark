@@ -49,9 +49,9 @@ int main(int argc, char** argv){
 	}
 
 	// Read Control Wiring file
-	cout << "Reading (CW): " << argv[2] << endl;
+	cout << "Reading (CW): " << gcolor::blue << cw_filename << gcolor::normal << endl;
 	if (!is.load_cw(cw_filename)){
-		cout << "Exiting" << endl;
+		cout << gcolor::red << "Failed to read CW file. Exiting" << gcolor::normal << endl;
 		return -1;
 	}
 
@@ -69,9 +69,9 @@ int main(int argc, char** argv){
 	}
 
 	// Read ISD file
-	cout << "Reading (ISD): " << isd_filename << endl;
+	cout << "Reading (ISD): " << gcolor::blue << isd_filename << gcolor::normal << endl;
 	if (!is.load_isd(isd_filename)){
-		cout << "Exiting" << endl;
+		cout << gcolor::red << "Failed to read ISD file. Exiting" << gcolor::normal << endl;
 		return -1;
 	}
 
@@ -104,8 +104,8 @@ int main(int argc, char** argv){
 	}
 
 	// Print messages
-	cout << "\nTarget Architecture: " << is.isv.arch << endl;
-	cout << "\nISV Series: " << is.isv.series << endl;
+	cout << "\nTarget Architecture: " << gcolor::blue << is.isv.arch << gcolor::normal << endl;
+	cout << "\nISV Series: " << gcolor::blue << is.isv.series << gcolor::normal << endl;
 
 	cout << is.log.all() << endl;
 
