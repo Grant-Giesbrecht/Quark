@@ -458,14 +458,109 @@ int main(int argc, char** argv){
 						nl = to_string(lnum_bpir) + ": " + to_string(byte1);
 						bpir.push_back(nl);
 						lnum_bpir++;
-					}else{
-						lgr.error("Failed to dereference key '" + program[pi].dirs[k].argument + "'", true);
-						return -1;
+					}else{ //Reference name was not found. Save to BPIR as referenced name (ie. angle brackets) and dereference at the end
+						
+						// Verify number of data bytes
+						if (is.ops[program[pi].instruction].data_bits != 2){
+							lgr.error("Cannot dereference address for instrucion taking other than 2 data bytes. (Line " + to_string(program[pi].lnum) + ")", true);
+							return -1;
+						}
+						
+						nl = to_string(lnum_bpir) + ": <" + program[pi].dirs[k].argument + ">[0]";
+						bpir.push_back(nl);
+						lnum_bpir++;
+
+						nl = to_string(lnum_bpir) + ": <" + program[pi].dirs[k].argument + ">[8]";
+						bpir.push_back(nl);
+						lnum_bpir++;
+						
+						// lgr.error("Failed to dereference key '" + program[pi].dirs[k].argument + "'", true);
+						// return -1;
 					}
 				}
 			}
 		}
 
+	}
+	
+	// Dereference any hanging address abstractions
+	for (size_t bi = 0 ; bi < bpir.size() ; bi++){
+		
+		// This has a hanging reference
+		if (bpir[bi].find("<") != std::string::npos){
+			
+			// Find colon
+			size_t idxC = bpir[bi].find(":");
+			
+			// Address name open and close indecies
+			size_t idxA0 = bpir[bi].find("<");
+			size_t idxA1 = bpir[bi].find(">");
+			
+			// Byte number, open and close indecies
+			size_t idxB0 = bpir[bi].find("[");
+			size_t idxB1 = bpir[bi].find("]");
+			
+			// Verify all characters are found
+			if (idxA1 == std::string::npos){
+				lgr.error("Failed to dereference hanging abstract address (Can't find '>' character). Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			if (idxB0 == std::string::npos){
+				lgr.error("Failed to dereference hanging abstract address (Can't find '[' character). Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			if (idxB1 == std::string::npos){
+				lgr.error("Failed to dereference hanging abstract address (Can't find ']' character). Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			if (idxC == std::string::npos){
+				lgr.error("Failed to dereference hanging abstract address (Can't find ':' character). Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			
+			// Get data elements from string
+			string ref_name = bpir[bi].substr(idxA0+1, idxA1-idxA0-1);
+			string bit_str = bpir[bi].substr(idxB0+1, idxB1-idxB0-1);
+			int bit_no;
+			try{
+				bit_no = stoi(bit_str);
+			}catch(...){
+				lgr.error("Failed to dereference hanging abstract address (Can't convert number '" + bit_str + "'). Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			
+			// Check that reference is in list of here_directives
+			if (!here_directives.count(ref_name)){
+				lgr.error("Failed to dereference hanging abstract address. Abstract address '" + ref_name + "' not found. Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			
+			// Get referenced address
+			uint16_t addr;
+			try{
+				addr = here_directives[ref_name];
+			}catch(...){
+				lgr.error("Failed to dereference abstract address '" + ref_name +"'. Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			
+			
+			uint16_t mask_byte0 = 255;
+			uint16_t mask_byte1 = 65280;
+
+			uint16_t byte0 = (addr & mask_byte0);
+			uint16_t byte1 = ((addr & mask_byte1) >> 8);
+
+			if (bit_no == 0){
+				bpir[bi] = bpir[bi].substr(0, idxC+1) + " " + to_string(byte0);
+			}else if(bit_no == 8){
+				bpir[bi] = bpir[bi].substr(0, idxC+1) + " " + to_string(byte1);
+			}else{
+				lgr.error("Failed to dereference address of index '" + to_string(bit_no) + "'. Must be either 0 or 8. Problematic BPIR contents:  '" + bpir[bi] +"'.", true);
+				return -1;
+			}
+			
+		}
 	}
 
 	//------------------------------- Print BPIR -------------------------------
