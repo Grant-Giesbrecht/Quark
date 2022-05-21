@@ -12,6 +12,7 @@
 #include <map>
 #include <cmath>
 #include <ctgmath>
+#include <ctime>
 
 #include "subatomic.hpp"
 
@@ -105,6 +106,7 @@ int main(int argc, char** argv){
 
 	string usrin;
 	int newmaj, newmin, newpatch;
+	string version_message;
 	string newseries = lastver.series;
 	do{
 
@@ -113,8 +115,9 @@ int main(int argc, char** argv){
 		cout << "Enter new version number: " << endl;
 
 		// Ask for major
-		cout << "\tMajor: " << std::flush;
+		cout << "\tMajor: " << gcolor::yellow << std::flush;
 		std::getline(std::cin, usrin);
+		cout << gcolor::normal;
 		try{
 			newmaj = stoi(usrin);
 		}catch(...){
@@ -124,8 +127,9 @@ int main(int argc, char** argv){
 		}
 
 		// ASk for minor
-		cout << "\tFS: " << flush;
+		cout << "\tFS: " << gcolor::yellow << flush;
 		std::getline(std::cin, usrin);
+		cout << gcolor::normal;
 		try{
 			newmin = stoi(usrin);
 		}catch(...){
@@ -135,8 +139,9 @@ int main(int argc, char** argv){
 		}
 
 		// ASk for patch
-		cout << "\tPatch: " << flush;
+		cout << "\tPatch: " << gcolor::yellow << flush;
 		std::getline(std::cin, usrin);
+		cout << gcolor::normal;
 		try{
 			newpatch = stoi(usrin);
 		}catch(...){
@@ -147,14 +152,22 @@ int main(int argc, char** argv){
 
 		// Ask for confirmation
 		cout << endl << "Will archive new version as: " << gcolor::bb << lastver.series << " " << to_string(newmaj) << "." << to_string(newmin) << "." << to_string(newpatch) << gcolor::normal << endl;
-		cout << "Confirm (y/n): " << flush;
+		cout << "Confirm (y/n): " << gcolor::yellow << flush;
 		std::getline(std::cin, usrin);
+		cout << gcolor::normal;
 		usrin = to_upper(usrin);
 		if (usrin == "Y" || usrin == "YES"){
 			break;
 		}
-
+		
 	}while(true);
+
+	// Ask for commit message
+	cout << endl << "Please add a version message. You can edit this later in the 'version_data.txt'\nfile in the version folder in the ISV_Archive." << endl;
+	cout << "\nMessage: " << gcolor::yellow << endl;
+	std::getline(std::cin, usrin);
+	version_message = usrin;
+	cout << gcolor::normal << endl;
 
 	//--------------------- Make new directory + copy files --------------------
 
@@ -169,6 +182,8 @@ int main(int argc, char** argv){
 	new_isd_path.concat("/"+save_name+".isd");
 	fs::path new_lut_path(new_path);
 	new_lut_path.concat("/"+save_name+".lut");
+	fs::path new_meta_path(new_path);
+	new_meta_path.concat("/version_data.txt");
 
 	// Make new directory
 	fs::create_directory(new_path);
@@ -178,6 +193,37 @@ int main(int argc, char** argv){
 	fs::copy(isd_path, new_isd_path);
 	fs::copy(lut_path, new_lut_path);
 
+	// Create metadata file
+	ofstream meta_file;
+	meta_file.open(new_meta_path.string());
+	if (!meta_file.is_open()){
+		cout << gcolor::red << "ERROR: Failed to create metadata file. Full path:\n\t " << new_meta_path.string() << gcolor::normal << endl;
+	}else{
+		
+		// Get local time
+		time_t jetzt = time(0);
+		char* timecstr = ctime(&jetzt);
+		string timestr(timecstr);
+		
+		// Get GMT time
+		tm* gmt = gmtime(&jetzt);
+		char* gmtimecstr = asctime(gmt);
+		string gmtimestr(gmtimecstr);
+		
+		// Write contents
+		meta_file << "local_time: " << timestr;
+		meta_file << "greenwich_mean_time: " << timestr;
+		meta_file << endl;
+		meta_file << "\nVersion Message::" << endl;
+		meta_file << version_message << endl;
+		
+		// Release resource
+		meta_file.close();
+		
+	}
+	
+	
+	
 	cout << "======================= New Archive Entry Created =======================" << endl;
 	cout << "New version: " << gcolor::bb << lastver.series << " " << to_string(newmaj) << "." << to_string(newmin) << "." << to_string(newpatch) << gcolor::normal << endl;
 	cout << "Archive Location: " << gcolor::bb << new_path << gcolor::normal << endl;
