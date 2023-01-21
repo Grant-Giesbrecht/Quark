@@ -1,6 +1,25 @@
 #ARCH Matterhorn821
 #SERIES Proto
 
+// New to this version:
+// 1. Changed FETCH_ to include IS_FETCH, and thus moved PC_CLK to line 3.
+// 2. Added instructions required for timer interrupt:
+//		I. RUN_TIMER_ISR_AUTOMATED
+//		II. VAL_CHC
+//		III. VAL_CHD
+//		IV. CHCD_TSTOP
+//		V. ISR_RTN
+//		VI. VAL_CHB
+//		VII. CHB_REGB
+//		VIII. VAL_AA
+//		IX. AA_TISR
+// 3. Reordered instructions placement in file to ascending order (No functional change)
+// 4. Re-numbered PMEM_CHA (now VAL_CHA) from 21 to 26. 21 is a reserved instruction that was being violated.
+// 5. Renamed:
+// 		I. PMEM_CHA -> VAL_CHA
+// 		II. PMEM_REGA -> VAL_REGA
+//		III. PMEM_REGB -> VAL_REGB
+
 // Fetches the instruction. Should appear as the first four phases of every
 // instruction.
 #DEF FETCH_
