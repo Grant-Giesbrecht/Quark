@@ -21,13 +21,13 @@ except getopt.GetoptError:
 	sys.exit(2)
 for opt, arg in opts:
 	if opt == '-h':
-		print("Blinkenrechner Project Flash Uploader")
+		print("Blinkenrechner Project CPU Lookup-Table Uploader")
 		print("")
 		print("Usage:")
-		print("  blinkup ")
-		print("  blinkup ... -i <file>")
-		print("  blinkup ... -h")
-		print("  blinkup ... -a")
+		print("  lutup ")
+		print("  lutup ... -i <file>")
+		print("  lutup ... -h")
+		print("  lutup ... -a")
 		print("")
 		print("Description")
 		print("  -i  File to upload. If not specified, menu to select version from archive")
