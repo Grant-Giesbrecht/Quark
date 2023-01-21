@@ -53,6 +53,7 @@ int main(int argc, char** argv){
 	bool verbose = false;
 	bool show_tokens = false;
 	bool show_statements = false;
+	bool show_compiler = false;
 
 	for (int argi = 2 ; argi < argc ; argi++){
 
@@ -60,7 +61,7 @@ int main(int argc, char** argv){
 		flag = argv[argi];
 
 		// Get value
-		if (strcmp(flag.c_str(), "-o") == 0){
+		if (strcmp(flag.c_str(), "-o") == 0){ // Specify BPI output
 			if (argi+1 >= argc){
 				log.warning("Incorrect number of args for flag: " + flag, true);
 				break;
@@ -68,7 +69,7 @@ int main(int argc, char** argv){
 			outfile = argv[argi+1];
 			log.msg("Outfile: " + outfile, true);
 			argi++;
-		}else if (strcmp(flag.c_str(), "-or") == 0){
+		}else if (strcmp(flag.c_str(), "-or") == 0){ // Specify BPIR output
 			if (argi+1 >= argc){
 				log.warning("Incorrect number of args for flag: " + flag, true);
 				break;
@@ -77,15 +78,17 @@ int main(int argc, char** argv){
 			save_bpir = true;
 			log.msg("BPIR Outfile: " + outfile_r, true);
 			argi++;
-		}else if (strcmp(flag.c_str(), "-v") == 0){
+		}else if (strcmp(flag.c_str(), "-v") == 0){ // Verbose output
 			verbose = true;
-		}else if (strcmp(flag.c_str(), "-dummy") == 0){
+		}else if (strcmp(flag.c_str(), "-dummy") == 0){ // Dummy run - do not save files
 			save_bpir = false;
 			save_bpi = false;
-		}else if (strcmp(flag.c_str(), "-tok") == 0 || strcmp(flag.c_str(), "-token") == 0 || strcmp(flag.c_str(), "-t") == 0){
+		}else if (strcmp(flag.c_str(), "-tok") == 0 || strcmp(flag.c_str(), "-token") == 0 || strcmp(flag.c_str(), "-t") == 0){ //Show token options
 			show_tokens = true;
-		}else if (strcmp(flag.c_str(), "-state") ==0 || strcmp(flag.c_str(), "-s") == 0){
+		}else if (strcmp(flag.c_str(), "-state") ==0 || strcmp(flag.c_str(), "-s") == 0){ // Show Statement objects
 			show_statements = true;
+		}else if (strcmp(flag.c_str(), "-cs") == 0){ // Show compiler state
+			show_compiler = true;
 		}else{
 			log.warning("Unrecognized flag: " + flag, true);
 		}
@@ -225,21 +228,30 @@ int main(int argc, char** argv){
 	cout << "Lexer and Parser returned with no errors." << endl;
 	cout << log.all() << endl;
 
+	cout << "Tree size: " << tree.size() << endl;
+
+	// Run through tree and execute each statement
+	for (size_t i = 0 ; i < tree.size() ; i++){
+		cout << "exec statement: " << i << endl << flush;
+		tree[i].exec(cs, log);
+	}
+
+	cout << log.all() << endl;
+
 	// Print statement list
 	if (show_statements){
 		cout << "Statement List:" << endl;
+		cout << " Tokens appear in square brackets, executed statements appear inside parenthesis." << endl;
 		for (size_t t = 0 ; t < tree.size() ; t++){
 			cout << statementstr(tree[t], t) << endl;
 			// if (token_list[t].type == TokenType::nl) cout << endl;
 		}
 	}
 
-	cout << "Tree size: " << tree.size() << endl;
-
-	// Run through tree and execute each statement
-	for (size_t i = 0 ; i < tree.size() ; i++){
-		tree[i].exec(cs, log);
-	}
+	// if (show_compiler){
+	// 	cout << "Compiler State: " << endl;
+	// 	cout << compilerstatestr()
+	// }
 
 	cout << "\nBPIR: " << endl;
 	cout << cs.str() << endl;
