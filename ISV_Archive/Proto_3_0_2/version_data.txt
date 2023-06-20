@@ -1,0 +1,6 @@
+local_time: Sun Feb 12 13:38:48 2023
+greenwich_mean_time: Sun Feb 12 13:38:48 2023
+
+
+Version Message::
+Fixed 2 critical errors. Both instruction 24 and 25 had an extra PC_CLK in their last phase.

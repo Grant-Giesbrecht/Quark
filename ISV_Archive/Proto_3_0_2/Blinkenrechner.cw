@@ -4,10 +4,6 @@
 // G. Giesbrecht
 // 15-8-2021
 
-// Changes: 
-// * Changed names of w4:0-w4:3
-// * Changed names of 
-
 // Notes:
 // * (BHM-159,10 Inverted): This signal would be (-) logic, except BHM-159,10
 //   caused this to be inverted between Z-III and Sys.B.
@@ -58,10 +54,10 @@ REGC_WR				3:7		OFF
 
 //***************** Word 4 *****************
 
-DISP_RECORD			4:0		OFF
-DISP_X_ENTER		4:1		OFF
-DISP_Y				4:2		OFF
-DISP_CLEAR			4:3		OFF
+DISP_CTRL0			4:0		OFF
+DISP_CTRL1			4:1		OFF
+DISP_CTRL2			4:2		OFF
+DISP_CTRL3			4:3		OFF
 DISP_CTRL4			4:4		OFF
 DISP_CTRL5			4:5		OFF
 DISP_CTRL6			4:6		OFF

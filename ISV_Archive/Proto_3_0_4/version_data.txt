@@ -1,0 +1,6 @@
+local_time: Sat Jun 10 14:46:03 2023
+greenwich_mean_time: Sat Jun 10 14:46:03 2023
+
+
+Version Message::
+Adds key interrupt instruction as duplicate of timer interrupt (plus bad_instruc flag) as crude fix to interrupt bug

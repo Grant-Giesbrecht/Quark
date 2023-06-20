@@ -2,13 +2,8 @@
 #SERIES Proto
 
 // Changes:
-//   * Added instruction: DISP_LINE
-//   * Added instruction: DISP_CLEAR
-//   * Added instruction: RAM_DISP
-//   * Added instruction: DISP_ENTER
-//   * Added instruction: MODREG_REGA
-//   * Added instruction: REGC_MODREG
-//   * Added instruction: VAL_RAM0
+//   * Populated keyboard interrupt as duplicate of timer interrupt plus bad_instruction flag as crude potential fix to interrupt failure.
+
 
 // Fetches the instruction. Should appear as the first four phases of every
 // instruction.
@@ -237,43 +232,6 @@
 #REPL FETCH_
 4: _REG_AA_OE REG_TIMER_ISR_WR PHI_RESET
 
-* DISP_LINE 31 1
-? Sets the line the display will output data on
-#REPL FETCH_
-#REPL GET_8b_DATA_end_ DISP_Y
-
-* DISP_CLEAR 32 0
-? Clears the display buffer
-#REPL FETCH_
-4: DISP_CLEAR PHI_RESET
-
-* RAM_DISP 33 2
-? Transfers 1 byte of data at RAM w/ specified 16 bit address to display as 8-bit int
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-11: _RAMS0_OE DISP_RECORD PHI_RESET
-
-* DISP_ENTER 34 1
-? Concludes data input to the display. Accepts one byte of data as the encoding byte. See Display firmware for codes.
-#REPL FETCH_
-#REPL GET_8b_DATA_end_ DISP_X_ENTER
-
-* MODREG_REGA 35 0
-? Transfers contents of the module register to register A
-#REPL FETCH_PROT_
-4: _MODREG_OE REGA_WR PHI_RESET
-
-* REGC_MODREG 36 0
-? Writes register C to the module register
-#REPL FETCH_
-4: _REGC_OE MODREG_WR PHI_RESET
-
-* VAL_RAM0 5 3
-? Writes a byte to RAMS0. First two bytes are the RAM address to write, last byte is the value to write.
-#REPL FETCH_
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-#REPL GET_8b_DATA_end_ RAMS0_WR
 
 // Technically the program macro isn't required here because this instruction
 // should never appear in code. Rigorously, however, both interrupt instructions

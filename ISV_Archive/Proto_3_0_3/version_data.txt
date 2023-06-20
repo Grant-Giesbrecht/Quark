@@ -1,0 +1,6 @@
+local_time: Mon May 29 17:22:13 2023
+greenwich_mean_time: Mon May 29 17:22:13 2023
+
+
+Version Message::
+Fixed timer interrupt instruction number. Was 117, which was based on an error in my notes and corresponded to conditional jumps. Changed to 85.

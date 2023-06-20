@@ -2,13 +2,8 @@
 #SERIES Proto
 
 // Changes:
-//   * Added instruction: DISP_LINE
-//   * Added instruction: DISP_CLEAR
-//   * Added instruction: RAM_DISP
-//   * Added instruction: DISP_ENTER
-//   * Added instruction: MODREG_REGA
-//   * Added instruction: REGC_MODREG
-//   * Added instruction: VAL_RAM0
+// * ISR_RTN: Fixed typo in line numbering. Shouldn't change behavior.
+// * CHCD_TSTOP: Fixed critical bug; forgot PHI_RESET at last line!
 
 // Fetches the instruction. Should appear as the first four phases of every
 // instruction.
@@ -203,14 +198,14 @@
 ? Transfers the data in CACHE C and CACHE D to the 16-bit TSTOP register. CACHE C will be transfered to bits 0-7, CACHE D to bits 8-15.
 #REPL FETCH_
 4: _CACHE_C_OE TSTOP0_WR
-5: _CACHE_D_OE TSTOP8_WR PHI_RESET
+5: _CACHE_D_OE TSTOP8_WR PC_CLK PHI_RESET
 
 * ISR_RTN 25 0
 ? Returns from an interrupt service routine to standard program execution
 #REPL FETCH_
 4: FLAG_IN_ISR_CLR
 5: _REG_IRTN_OE _WRITE_PC
-6: _REG_IRTN_OE _WRITE_PC PHI_RESET
+6: _REG_IRTN_OE _WRITE_PC PC_CLK PHI_RESET
 
 * VAL_CHA 26 1
 ? Transfers one byte of data that is stored with the instruction to CACHE A
@@ -237,65 +232,16 @@
 #REPL FETCH_
 4: _REG_AA_OE REG_TIMER_ISR_WR PHI_RESET
 
-* DISP_LINE 31 1
-? Sets the line the display will output data on
-#REPL FETCH_
-#REPL GET_8b_DATA_end_ DISP_Y
-
-* DISP_CLEAR 32 0
-? Clears the display buffer
-#REPL FETCH_
-4: DISP_CLEAR PHI_RESET
-
-* RAM_DISP 33 2
-? Transfers 1 byte of data at RAM w/ specified 16 bit address to display as 8-bit int
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-11: _RAMS0_OE DISP_RECORD PHI_RESET
-
-* DISP_ENTER 34 1
-? Concludes data input to the display. Accepts one byte of data as the encoding byte. See Display firmware for codes.
-#REPL FETCH_
-#REPL GET_8b_DATA_end_ DISP_X_ENTER
-
-* MODREG_REGA 35 0
-? Transfers contents of the module register to register A
-#REPL FETCH_PROT_
-4: _MODREG_OE REGA_WR PHI_RESET
-
-* REGC_MODREG 36 0
-? Writes register C to the module register
-#REPL FETCH_
-4: _REGC_OE MODREG_WR PHI_RESET
-
-* VAL_RAM0 5 3
-? Writes a byte to RAMS0. First two bytes are the RAM address to write, last byte is the value to write.
-#REPL FETCH_
-#REPL GET_16b_ADDR_
-10: _REG_AA_OE SR0_MAR_WR
-#REPL GET_8b_DATA_end_ RAMS0_WR
 
 // Technically the program macro isn't required here because this instruction
 // should never appear in code. Rigorously, however, both interrupt instructions
-// would be number 21 rather than allowing one to be assigned 85.
-// Instruction 21 and 85 should never appear in the program, however both should
-// appear on the bus.
-* RUN_TIMER_ISR_AUTOMATED 85 0
+// would be number 53 (0x35) rather than allowing one to be assigned 117 (0x75).
+// Instruction 53 should never appear in the program, however it does appear as
+// 53 on the bus (after being injected by the interrupt injector)
+* RUN_TIMER_ISR_AUTOMATED 117 0
 ? Instruction injected to run a timer interrupt service routine
-#PRGM 85
+#PRGM 117
 #REPL FETCH_
 4: _REG_TIMER_ISR_OE _WRITE_PC
 5: _REG_TIMER_ISR_OE _WRITE_PC PC_CLK
 6: FLAG_TIMER_INT_CLR FLAG_IN_ISR_SET PHI_RESET
-
-// This is supposed to be the keyboard interrupt, but I'm having it perform the same
-// action as the timer in addition to setting the bad instruction flag. This is because
-// I'm encountering issues with the timer flag bit changing.
-* RUN_KEYTIMER_ISR_AUTOMATED 21 0
-? Instruction injected to run a timer interrupt service routine
-#PRGM 21
-#REPL FETCH_
-4: _REG_TIMER_ISR_OE _WRITE_PC ERR_SET_BADINSTRUC
-5: _REG_TIMER_ISR_OE _WRITE_PC PC_CLK ERR_SET_BADINSTRUC
-6: FLAG_TIMER_INT_CLR FLAG_IN_ISR_SET PHI_RESET ERR_SET_BADINSTRUC
-
