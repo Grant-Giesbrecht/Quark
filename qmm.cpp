@@ -408,6 +408,59 @@ int main(int argc, char** argv){
 					lgr.error("Line " + to_string(program[pi].lnum) + " is missing a data byte", true);
 					return -1;
 				}
+			}else if(num_bytes == 3){ // If three data bytes (24 bit)
+				
+				if (program[pi].data_bytes.size() == 1){
+
+					uint32_t addr = program[pi].data_bytes[0];
+
+					uint32_t mask_byte0 = 255;
+					uint32_t mask_byte1 = 65280; //255 << 8
+					uint32_t mask_byte2 = 16711680; //255 << 16
+
+					uint32_t byte0 = (addr & mask_byte0);
+					uint32_t byte1 = ((addr & mask_byte1) >> 8);
+					uint32_t byte2 = ((addr & mask_byte1) >> 16);
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte0);
+					bpir.push_back(nl);
+					lnum_bpir++;
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte1);
+					bpir.push_back(nl);
+					lnum_bpir++;
+					
+					nl = to_string(lnum_bpir) + ": " + to_string(byte2);
+					bpir.push_back(nl);
+					lnum_bpir++;
+					
+				}else if (program[pi].data_bytes.size() == 2){
+					lgr.warning("Three-byte data with 2 values assumes a 16-bit number first followed by an 8-bit number", true);
+
+					uint16_t addr = program[pi].data_bytes[0];
+
+					uint16_t mask_byte0 = 255;
+					uint16_t mask_byte1 = 65280;
+
+					uint16_t byte0 = (addr & mask_byte0);
+					uint16_t byte1 = ((addr & mask_byte1) >> 8);
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte0);
+					bpir.push_back(nl);
+					lnum_bpir++;
+
+					nl = to_string(lnum_bpir) + ": " + to_string(byte1);
+					bpir.push_back(nl);
+					lnum_bpir++;
+					
+					nl = to_string(lnum_bpir) + ": " + to_string(program[pi].data_bytes[1]);
+					bpir.push_back(nl);
+					lnum_bpir++;
+
+				}else if(program[pi].dirs.size() < 1){
+					lgr.error("Line " + to_string(program[pi].lnum) + " is missing 1+ data bytes", true);
+					return -1;
+				}
 
 
 			}else if(num_bytes != 0){

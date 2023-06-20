@@ -268,7 +268,7 @@
 #REPL FETCH_
 4: _REGC_OE MODREG_WR PHI_RESET
 
-* VAL_RAM0 5 3
+* VAL_RAM0 37 3
 ? Writes a byte to RAMS0. First two bytes are the RAM address to write, last byte is the value to write.
 #REPL FETCH_
 #REPL GET_16b_ADDR_
